@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Header } from './components/Header'
 import { Hero } from './components/Hero'
 import { Features } from './components/Features'
@@ -18,255 +19,161 @@ import { ProductsProvider } from './contexts/ProductsContext'
 import { Toaster } from './components/ui/sonner'
 import { Product } from './lib/types'
 
-type ViewType = 'home' | 'products' | 'product-detail' | 'cart' | 'checkout' | 'login' | 'register' | 'profile' | 'admin'
 
 function AppContent() {
   const { user, isAdmin } = useAuth()
-  const [currentView, setCurrentView] = useState<ViewType>('home')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate()
+  // Helper: navigate and optionally reset search/scroll
+  const navigateTo = (path: string, opts?: { resetSearch?: boolean; scrollTop?: boolean }) => {
+    if (opts?.resetSearch) setSearchQuery('')
+    navigate(path)
+    if (opts?.scrollTop ?? true) window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product)
-    setCurrentView('product-detail')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    navigateTo(`/product/${product.id}`)
   }
 
   const handleBackFromProductDetail = () => {
-    setCurrentView('products')
     setSelectedProduct(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    navigateTo('/products')
   }
 
-  const handleCartClick = () => {
-    setCurrentView('cart')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleCheckoutClick = () => {
-    setCurrentView('checkout')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const handleCartClick = () => navigateTo('/cart')
+  const handleCheckoutClick = () => navigateTo('/checkout')
 
   const handleNavigate = (section: string) => {
-    if (section === 'home') {
-      setCurrentView('home')
-      setSearchQuery('')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else if (section === 'products') {
-      setCurrentView('products')
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }, 100)
-    } else if (section === 'cart') {
-      setCurrentView('cart')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else if (section === 'about') {
-      setCurrentView('home')
-      setTimeout(() => {
-        const featuresSection = document.getElementById('features')
-        featuresSection?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
-    } else if (section === 'contact') {
-      setCurrentView('home')
-      setTimeout(() => {
-        const footer = document.getElementById('footer')
-        footer?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
-    }
+    if (section === 'home') return navigateTo('/', { resetSearch: true })
+    if (section === 'products') return (navigate('/products'), setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100))
+    if (section === 'cart') return navigateTo('/cart')
+    if (section === 'about') return (navigate('/'), setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 100))
+    if (section === 'contact') return (navigate('/'), setTimeout(() => document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' }), 100))
   }
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    setCurrentView('products')
+    navigate('/products')
   }
 
   const handleViewAllProducts = () => {
     setSearchQuery('')
-    setCurrentView('products')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    navigateTo('/products')
   }
 
-  const handleBackToHome = () => {
-    setCurrentView('home')
-    setSearchQuery('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleBackFromCheckout = () => {
-    setCurrentView('cart')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleBackFromCart = () => {
-    setCurrentView('home')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleLoginClick = () => {
-    setCurrentView('login')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleRegisterClick = () => {
-    setCurrentView('register')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const handleBackToHome = () => navigateTo('/', { resetSearch: true })
+  const handleBackFromCheckout = () => navigateTo('/cart')
+  const handleBackFromCart = () => navigateTo('/')
+  const handleLoginClick = () => navigateTo('/login')
+  const handleRegisterClick = () => navigateTo('/register')
 
   const handleProfileClick = () => {
-    if (!user) {
-      handleLoginClick()
-      return
-    }
-    setCurrentView('profile')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!user) return handleLoginClick()
+    navigateTo('/profile')
   }
 
   const handleAdminClick = () => {
-    if (!user || !isAdmin()) {
-      handleLoginClick()
-      return
-    }
-    setCurrentView('admin')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!user || !isAdmin()) return handleLoginClick()
+    navigateTo('/admin')
   }
 
   const handleLoginSuccess = () => {
-    if (user && isAdmin()) {
-      setCurrentView('admin')
-    } else {
-      setCurrentView('home')
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (user && isAdmin()) navigateTo('/admin')
+    else navigateTo('/')
   }
 
-  // Admin view - no header/footer
-  if (currentView === 'admin' && user && isAdmin()) {
-    return (
-      <div className="min-h-screen">
-        <AdminDashboard onLogout={handleBackToHome} />
-        <Toaster position="top-right" />
+  const headerProps = {
+    onCartClick: handleCartClick,
+    onSearch: handleSearch,
+    onNavigate: handleNavigate,
+    onLoginClick: handleLoginClick,
+    onProfileClick: handleProfileClick,
+    onAdminClick: handleAdminClick,
+  }
+
+  const PageLayout = ({ children }: { children: ReactNode }) => (
+    <div className="min-h-screen">
+      <Header {...headerProps} />
+      {children}
+      <div id="footer">
+        <Footer />
       </div>
-    )
-  }
+      <Toaster position="top-right" />
+    </div>
+  )
 
-  // Auth views - no normal header/footer
-  if (currentView === 'login') {
-    return (
-      <div className="min-h-screen">
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <PageLayout>
+            <Hero onExplore={handleViewAllProducts} onViewCollection={handleViewAllProducts} />
+            <div id="features">
+              <Features />
+            </div>
+            <FeaturedProducts onProductClick={handleProductClick} onViewAll={handleViewAllProducts} />
+          </PageLayout>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <PageLayout>
+            <AllProducts onProductClick={handleProductClick} searchQuery={searchQuery} />
+          </PageLayout>
+        }
+      />
+      <Route
+        path="/product/:id"
+        element={
+          <PageLayout>
+            <ProductDetailPage product={selectedProduct} onBack={handleBackFromProductDetail} onProductClick={handleProductClick} />
+          </PageLayout>
+        }
+      />
+      <Route path="/cart" element={
+        <CartPage 
+          onBack={handleBackFromCart}
+          onCheckout={handleCheckoutClick}
+        />
+      } />
+      <Route path="/checkout" element={
+        <Checkout 
+          onBack={handleBackFromCheckout}
+          onSuccess={handleBackToHome}
+        />
+      } />
+      <Route path="/login" element={
         <Login 
           onBack={handleBackToHome}
           onSwitchToRegister={handleRegisterClick}
           onLoginSuccess={handleLoginSuccess}
         />
-        <Toaster position="top-right" />
-      </div>
-    )
-  }
-
-  if (currentView === 'register') {
-    return (
-      <div className="min-h-screen">
+      } />
+      <Route path="/register" element={
         <Register 
           onBack={handleBackToHome}
           onSwitchToLogin={handleLoginClick}
           onRegisterSuccess={handleLoginSuccess}
         />
-        <Toaster position="top-right" />
-      </div>
-    )
-  }
-
-  if (currentView === 'profile') {
-    return (
-      <div className="min-h-screen">
+      } />
+      <Route path="/profile" element={
         <UserProfile onBack={handleBackToHome} />
-        <Toaster position="top-right" />
-      </div>
-    )
-  }
-
-  // Product detail view
-  if (currentView === 'product-detail' && selectedProduct) {
-    return (
-      <div className="min-h-screen">
-        <Header 
-          onCartClick={handleCartClick}
-          onSearch={handleSearch}
-          onNavigate={handleNavigate}
-          onLoginClick={handleLoginClick}
-          onProfileClick={handleProfileClick}
-          onAdminClick={handleAdminClick}
-        />
-        <ProductDetailPage 
-          product={selectedProduct}
-          onBack={handleBackFromProductDetail}
-          onProductClick={handleProductClick}
-        />
-        <div id="footer">
-          <Footer />
-        </div>
-        <Toaster position="top-right" />
-      </div>
-    )
-  }
-
-  // Normal app views
-  return (
-    <div className="min-h-screen">
-      <Header 
-        onCartClick={handleCartClick}
-        onSearch={handleSearch}
-        onNavigate={handleNavigate}
-        onLoginClick={handleLoginClick}
-        onProfileClick={handleProfileClick}
-        onAdminClick={handleAdminClick}
-      />
-
-      {currentView === 'home' && (
-        <>
-          <Hero 
-            onExplore={handleViewAllProducts}
-            onViewCollection={handleViewAllProducts}
-          />
-          <div id="features">
-            <Features />
+      } />
+      <Route path="/admin" element={
+        user && isAdmin() ? (
+          <div className="min-h-screen">
+            <AdminDashboard onLogout={handleBackToHome} />
+            <Toaster position="top-right" />
           </div>
-          <FeaturedProducts 
-            onProductClick={handleProductClick}
-            onViewAll={handleViewAllProducts}
-          />
-        </>
-      )}
-
-      {currentView === 'products' && (
-        <AllProducts 
-          onProductClick={handleProductClick}
-          searchQuery={searchQuery}
-        />
-      )}
-
-      {currentView === 'cart' && (
-        <CartPage 
-          onBack={handleBackFromCart}
-          onCheckout={handleCheckoutClick}
-          onLoginClick={handleLoginClick}
-        />
-      )}
-
-      {currentView === 'checkout' && (
-        <Checkout 
-          onBack={handleBackFromCheckout}
-          onSuccess={handleBackToHome}
-        />
-      )}
-
-      <div id="footer">
-        <Footer />
-      </div>
-
-      <Toaster position="top-right" />
-    </div>
+        ) : (
+          <Navigate to="/login" />
+        )
+      } />
+    </Routes>
   )
 }
 
@@ -275,7 +182,9 @@ export default function App() {
     <AuthProvider>
       <ProductsProvider>
         <CartProvider>
-          <AppContent />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
         </CartProvider>
       </ProductsProvider>
     </AuthProvider>

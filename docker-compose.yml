@@ -4,13 +4,13 @@ services:
     build:
       context: ./backend
     ports:
-      - '4000:4000'
+      - '4001:4001'
     environment:
       # MONGO_URI can be provided via host environment or .env.backend file.
       - MONGO_URI
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - PORT=4000
+      - PORT=4001
       - API_PREFIX=/api
       - JWT_SECRET
       - DEBUG_KEY
