@@ -74,9 +74,9 @@ export function AdminOrders() {
 
   const filteredOrders = ordersList.filter(order => {
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.userEmail.toLowerCase().includes(searchQuery.toLowerCase())
+      order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customerInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customerInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
 
@@ -93,8 +93,8 @@ export function AdminOrders() {
       const res = await apiOrders.updateStatus(orderId, newStatus)
       const updated = res.data as Order
       // Update local list
-  setOrdersList(prev => prev.map(o => (o.id === ((updated as any)._id || updated.id) ? ({ ...o, status: updated.status }) as Order : o)))
-      if (selectedOrder?.id === orderId) {
+      setOrdersList(prev => prev.map(o => (o._id === updated._id ? ({ ...o, status: updated.status }) as Order : o)))
+      if (selectedOrder?._id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus })
       }
       // Also update in AuthContext storage if present
@@ -109,12 +109,7 @@ export function AdminOrders() {
     apiOrders.list().then((res) => {
       if (!mounted) return
       const data = res.data || []
-      // normalize _id to id expected by frontend Order type
-      const normalized = data.map((d: any) => ({
-        ...d,
-        id: d._id,
-      }))
-      setOrdersList(normalized)
+      setOrdersList(data)
     }).catch(err => console.error('Failed to load orders', err))
     return () => { mounted = false }
   }, [])
@@ -161,17 +156,17 @@ export function AdminOrders() {
           ) : (
             <div className="divide-y">
               {filteredOrders.map((order) => (
-                <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
+                <div key={order._id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <p>#{order.id.slice(-6).toUpperCase()}</p>
+                        <p>#{order.orderId}</p>
                         <Badge className={getStatusColor(order.status)}>
                           {getStatusText(order.status)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-600">{order.userName}</p>
-                      <p className="text-sm text-gray-500">{order.userEmail}</p>
+                      <p className="text-sm text-gray-600">{order.customerInfo.name}</p>
+                      <p className="text-sm text-gray-500">{order.customerInfo.email}</p>
                       <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
                     </div>
 
@@ -203,7 +198,7 @@ export function AdminOrders() {
           {selectedOrder && (
             <>
               <DialogHeader>
-                <DialogTitle>Chi Tiết Đơn Hàng #{selectedOrder.id.slice(-6).toUpperCase()}</DialogTitle>
+                <DialogTitle>Chi Tiết Đơn Hàng #{selectedOrder.orderId}</DialogTitle>
                 <DialogDescription>
                   Đặt hàng lúc {formatDate(selectedOrder.createdAt)}
                 </DialogDescription>
@@ -215,7 +210,7 @@ export function AdminOrders() {
                   <Label className="mb-2 block">Trạng thái đơn hàng</Label>
                   <Select 
                     value={selectedOrder.status} 
-                    onValueChange={(value) => handleStatusChange(selectedOrder.id, value as Order['status'])}
+                    onValueChange={(value) => handleStatusChange(selectedOrder._id, value as Order['status'])}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -238,24 +233,24 @@ export function AdminOrders() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tên:</span>
-                      <span>{selectedOrder.userName}</span>
+                      <span>{selectedOrder.customerInfo.name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Email:</span>
-                      <span>{selectedOrder.userEmail}</span>
+                      <span>{selectedOrder.customerInfo.email}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">SĐT:</span>
-                      <span>{selectedOrder.userPhone}</span>
+                      <span>{selectedOrder.customerInfo.phone}</span>
                     </div>
                     <div className="flex justify-between items-start">
                       <span className="text-gray-600">Địa chỉ:</span>
-                      <span className="text-right max-w-xs">{selectedOrder.shippingAddress}</span>
+                      <span className="text-right max-w-xs">{selectedOrder.customerInfo.address}</span>
                     </div>
-                    {selectedOrder.note && (
+                    {selectedOrder.notes && (
                       <div className="flex justify-between items-start">
                         <span className="text-gray-600">Ghi chú:</span>
-                        <span className="text-right max-w-xs">{selectedOrder.note}</span>
+                        <span className="text-right max-w-xs">{selectedOrder.notes}</span>
                       </div>
                     )}
                   </div>

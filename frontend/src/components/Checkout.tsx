@@ -59,9 +59,8 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     }
 
     try {
-      // Save order - send all required fields per backend schema
+      // Save order - backend will get userId from JWT token
       await addOrder({
-        userId: parseInt(user?.id || '1') || 1,
         items: cart.map(item => ({
           productId: item.id,
           productName: item.name,

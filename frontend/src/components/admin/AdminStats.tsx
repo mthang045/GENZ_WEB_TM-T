@@ -112,10 +112,10 @@ export function AdminStats() {
           ) : (
             <div className="space-y-4">
               {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={order._id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
-                    <p>#{order.id.slice(-6).toUpperCase()}</p>
-                    <p className="text-sm text-gray-500">{order.userName}</p>
+                    <p>#{order.orderId}</p>
+                    <p className="text-sm text-gray-500">{order.customerInfo.name}</p>
                   </div>
                   <div className="text-right mr-4">
                     <p>{formatPrice(order.totalAmount)}</p>

@@ -12,13 +12,24 @@ router.use(authMiddleware)
 router.get('/orders', async (req, res) => {
   try {
     const ordersCollection = db.collection('orders')
-    // Get userId from auth token (if present)
-    const userId = (req as any).userId
+    // Get _id from auth token
+    const userIdFromToken = (req as any).userId
     
-    // If user is authenticated, filter by userId; otherwise return all
-    // Convert userId to number for consistent query
-    const query = userId ? { userId: parseInt(userId) || userId } : {}
-    const orders = await ordersCollection.find(query).sort({ createdAt: -1 }).toArray()
+    if (!userIdFromToken) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Query user collection to get userId field (int)
+    const usersCollection = db.collection('users')
+    const user = await usersCollection.findOne({ _id: new ObjectId(userIdFromToken) })
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const userId = user.userId // This is the numeric userId (int)
+    
+    // Query orders by customerInfo.userId (int)
+    const orders = await ordersCollection.find({ "customerInfo.userId": userId }).sort({ createdAt: -1 }).toArray()
     res.json({ data: orders })
   } catch (err) {
     console.error(err)
@@ -32,15 +43,32 @@ router.post('/orders', async (req, res) => {
     const data = req.body
     const ordersCollection = db.collection('orders')
     
+    // Get _id from JWT token
+    const userIdFromToken = (req as any).userId
+    if (!userIdFromToken) {
+      return res.status(401).json({ error: 'Unauthorized - no userId in token' })
+    }
+
+    // Query user collection to get userId field (int)
+    const usersCollection = db.collection('users')
+    const user = await usersCollection.findOne({ _id: new ObjectId(userIdFromToken) })
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const userId = user.userId // This is the numeric userId (int)
+    
     // Generate orderId: ORD-YYYYMMDD-XXXXXX
     const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-6)}`
     
     // Create order with ALL required fields per MongoDB schema
     const orderData = {
       orderId,
-      userId: parseInt(data.userId) || 1,
       items: data.items || [],
-      customerInfo: data.customerInfo || {},
+      customerInfo: {
+        userId,
+        ...data.customerInfo
+      },
       totalAmount: data.totalAmount || 0,
       shippingCost: data.shippingCost || 0,
       paymentMethod: data.paymentMethod || 'cod',

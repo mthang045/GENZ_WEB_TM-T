@@ -2,6 +2,7 @@ export interface User {
   id: string
   email: string
   name: string
+  userId?: number
   role: 'admin' | 'user'
   createdAt: string
 }
@@ -9,7 +10,6 @@ export interface User {
 export interface Order {
   _id: string
   orderId: string
-  userId: number
   items: {
     productId: string
     productName: string
@@ -19,6 +19,7 @@ export interface Order {
     size: string
   }[]
   customerInfo: {
+    userId?: number
     name: string
     email: string
     phone: string

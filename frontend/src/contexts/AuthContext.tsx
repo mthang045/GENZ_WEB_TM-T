@@ -32,12 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
 
-  // Load user and orders from API
+  // Load user from localStorage and orders from API on mount
   useEffect(() => {
+    // Clean up old localStorage keys
+    localStorage.removeItem('genz_products')
+
+    // Load user from localStorage (persist session)
     const savedUser = localStorage.getItem('genz_user')
-    
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch (err) {
+        console.error('Failed to parse saved user:', err)
+      }
     }
 
     // Load orders from API
@@ -133,7 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const addOrder = async (orderData: Omit<Order, '_id' | 'orderId' | 'createdAt' | 'updatedAt' | 'status'>) => {
     try {
       const res = await apiOrders.create({
-        userId: orderData.userId,
         items: orderData.items,
         customerInfo: orderData.customerInfo,
         totalAmount: orderData.totalAmount,
@@ -171,8 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getUserOrders = (): Order[] => {
     if (!user) return []
-    const userId = parseInt(user.id) || 1
-    return orders.filter(order => order.userId === userId)
+    // Filter orders by userId (numeric) in customerInfo
+    return orders.filter(order => order.customerInfo.userId === user.userId)
   }
 
   return (

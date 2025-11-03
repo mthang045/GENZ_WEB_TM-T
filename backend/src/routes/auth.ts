@@ -47,7 +47,7 @@ router.post('/auth/register', async (req, res) => {
     })
 
     const token = jwt.sign({ sub: result.insertedId.toString(), role: 'user' }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
-    res.status(201).json({ token, user: { id: result.insertedId.toString(), email, name, role: 'user' } })
+    res.status(201).json({ token, user: { id: result.insertedId.toString(), email, name, userId: nextUserId, role: 'user' } })
   } catch (err) {
     console.error('Registration error:', err)
     res.status(500).json({ error: 'Registration failed' })
@@ -72,7 +72,7 @@ router.post('/auth/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
 
     const token = jwt.sign({ sub: user._id.toString(), role: user.role }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
-    res.json({ token, user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role } })
+    res.json({ token, user: { id: user._id.toString(), email: user.email, name: user.name, userId: user.userId, role: user.role } })
   } catch (err) {
     console.error('Login error:', err)
     res.status(500).json({ error: 'Login failed' })

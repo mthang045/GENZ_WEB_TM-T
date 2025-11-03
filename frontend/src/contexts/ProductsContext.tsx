@@ -19,7 +19,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>(undefined)
 
-  // Load products from localStorage or use initial data
+  // Load products from API
   useEffect(() => {
     let mounted = true
 
@@ -27,21 +27,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true)
         const res = await api.list()
-        // API wrapper returns { source, data }
         const data = res.data || res
         if (!mounted) return
         setProducts(data)
-        localStorage.setItem('genz_products', JSON.stringify(data))
       } catch (err: any) {
-        console.error('Failed to load products from API, falling back to local', err)
+        console.error('Failed to load products from API', err)
         setError(err?.message || String(err))
-        const savedProducts = localStorage.getItem('genz_products')
-        if (savedProducts) {
-          setProducts(JSON.parse(savedProducts))
-        } else {
-          // If no API and no cache, show empty state
-          setProducts([])
-        }
+        setProducts([])
       } finally {
         setLoading(false)
       }
@@ -51,18 +43,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     return () => { mounted = false }
   }, [])
 
-  const saveProducts = (newProducts: Product[]) => {
-    setProducts(newProducts)
-    localStorage.setItem('genz_products', JSON.stringify(newProducts))
-  }
-
   const addProduct = (productData: Omit<Product, 'id'>) => {
     const newProduct: Product = {
       ...productData,
       id: `product-${Date.now()}`
     }
     const updatedProducts = [...products, newProduct]
-    saveProducts(updatedProducts)
+    setProducts(updatedProducts)
     toast.success('Thêm sản phẩm thành công!')
   }
 
@@ -70,13 +57,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     const updatedProducts = products.map(product =>
       product.id === id ? { ...product, ...productData } : product
     )
-    saveProducts(updatedProducts)
+    setProducts(updatedProducts)
     toast.success('Cập nhật sản phẩm thành công!')
   }
 
   const deleteProduct = (id: string) => {
     const updatedProducts = products.filter(product => product.id !== id)
-    saveProducts(updatedProducts)
+    setProducts(updatedProducts)
     toast.success('Xóa sản phẩm thành công!')
   }
 
