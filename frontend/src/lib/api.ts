@@ -33,11 +33,20 @@ export const products = {
 
 export const auth = {
   register: (payload: any) => apiFetch('api/auth/register', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
-  login: (payload: any) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  login: (payload: any) => apiFetch('api/auth/login', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
 };
 
 export const orders = {
   list: () => apiFetch('api/orders'),
+  create: (payload: any) => apiFetch('api/orders', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   get: (id: string) => apiFetch(`api/orders/${id}`),
   updateStatus: (id: string, status: string) => apiFetch(`api/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), headers: { 'Content-Type': 'application/json' } })
+}
+
+export const carts = {
+  get: () => apiFetch('api/carts'),
+  addItem: (payload: any) => apiFetch('api/carts/items', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  updateItem: (productId: string, payload: any) => apiFetch(`api/carts/items/${productId}`, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  removeItem: (productId: string) => apiFetch(`api/carts/items/${productId}`, { method: 'DELETE' }),
+  clear: () => apiFetch('api/carts', { method: 'DELETE' }),
 }

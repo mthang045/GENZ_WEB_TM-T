@@ -152,11 +152,11 @@ export function UserProfile({ onBack }: UserProfileProps) {
                 ) : (
                   <div className="space-y-4">
                     {userOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((order) => (
-                      <div key={order.id} className="border rounded-lg p-4 space-y-3">
+                      <div key={order._id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-sm text-gray-500">Mã đơn hàng</p>
-                            <p>#{order.id.slice(-6).toUpperCase()}</p>
+                            <p>{order.orderId}</p>
                           </div>
                           <Badge className={getStatusColor(order.status)}>
                             {getStatusText(order.status)}

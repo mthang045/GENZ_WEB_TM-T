@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { User, Order } from '../lib/auth-types'
-import { auth as apiAuth } from '../lib/api'
+import { auth as apiAuth, orders as apiOrders } from '../lib/api'
 import { CartItem } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -11,7 +11,7 @@ interface AuthContextType {
   logout: () => void
   isAdmin: () => boolean
   orders: Order[]
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => void
+    addOrder: (order: Omit<Order, '_id' | 'orderId' | 'createdAt' | 'updatedAt' | 'status'>) => Promise<void>
   updateOrderStatus: (orderId: string, status: Order['status']) => void
   getUserOrders: () => Order[]
 }
@@ -32,19 +32,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
 
-  // Load user and orders from localStorage
+  // Load user and orders from API
   useEffect(() => {
     const savedUser = localStorage.getItem('genz_user')
-    const savedOrders = localStorage.getItem('genz_orders')
     
     if (savedUser) {
       setUser(JSON.parse(savedUser))
     }
-    
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders))
+
+    // Load orders from API
+    const loadOrders = async () => {
+      try {
+        const res = await apiOrders.list()
+        const data = res.data || res
+        setOrders(data)
+      } catch (err: any) {
+        console.error('Failed to load orders from API', err)
+      }
     }
+
+    loadOrders()
   }, [])
+
+  const loadOrdersFromAPI = async () => {
+    try {
+      const res = await apiOrders.list()
+      const data = res.data || res
+      setOrders(data)
+    } catch (err: any) {
+      console.error('Failed to reload orders:', err)
+    }
+  }
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Try admin account first (local demo)
@@ -58,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(adminUser)
       localStorage.setItem('genz_user', JSON.stringify(adminUser))
+      await loadOrdersFromAPI()
       toast.success('Đăng nhập thành công!')
       return true
     }
@@ -69,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('genz_token', res.token)
         localStorage.setItem('genz_user', JSON.stringify(res.user))
         setUser(res.user)
+        await loadOrdersFromAPI()
         toast.success('Đăng nhập thành công!')
         return true
       }
@@ -87,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('genz_token', res.token)
         localStorage.setItem('genz_user', JSON.stringify(res.user))
         setUser(res.user)
+        await loadOrdersFromAPI()
         toast.success('Đăng ký thành công!')
         return true
       }
@@ -109,30 +130,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user?.role === 'admin'
   }
 
-  const addOrder = (orderData: Omit<Order, 'id' | 'createdAt'>) => {
-    const newOrder: Order = {
-      ...orderData,
-      id: `order-${Date.now()}`,
-      createdAt: new Date().toISOString()
+  const addOrder = async (orderData: Omit<Order, '_id' | 'orderId' | 'createdAt' | 'updatedAt' | 'status'>) => {
+    try {
+      const res = await apiOrders.create({
+        userId: orderData.userId,
+        items: orderData.items,
+        customerInfo: orderData.customerInfo,
+        totalAmount: orderData.totalAmount,
+        shippingCost: orderData.shippingCost,
+        paymentMethod: orderData.paymentMethod,
+        paymentStatus: orderData.paymentStatus,
+        notes: orderData.notes
+      })
+      
+      const newOrder = res.data || res
+      setOrders(prev => [...prev, newOrder])
+      toast.success('Đặt hàng thành công!')
+      
+      // Reload orders from API to stay in sync
+      try {
+        const listRes = await apiOrders.list()
+        setOrders(listRes.data || listRes)
+      } catch (err) {
+        console.warn('Failed to reload orders after creating:', err)
+      }
+    } catch (err: any) {
+      console.error('Failed to create order:', err)
+      toast.error('Lỗi khi đặt hàng: ' + (err?.message || String(err)))
+      throw err
     }
-    
-    const updatedOrders = [...orders, newOrder]
-    setOrders(updatedOrders)
-    localStorage.setItem('genz_orders', JSON.stringify(updatedOrders))
   }
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
     const updatedOrders = orders.map(order => 
-      order.id === orderId ? { ...order, status } : order
+      order._id === orderId ? { ...order, status } : order
     )
     setOrders(updatedOrders)
-    localStorage.setItem('genz_orders', JSON.stringify(updatedOrders))
     toast.success('Cập nhật trạng thái đơn hàng thành công!')
   }
 
   const getUserOrders = (): Order[] => {
     if (!user) return []
-    return orders.filter(order => order.userId === user.id)
+    const userId = parseInt(user.id) || 1
+    return orders.filter(order => order.userId === userId)
   }
 
   return (

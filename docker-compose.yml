@@ -6,7 +6,6 @@ services:
     ports:
       - '4000:4000'
     environment:
-      # MONGO_URI can be provided via host environment or .env.backend file.
       - MONGO_URI
       - REDIS_HOST=redis
       - REDIS_PORT=6379

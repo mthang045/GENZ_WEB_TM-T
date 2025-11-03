@@ -1,6 +1,8 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { CartItem, Product } from '../lib/types'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
+import { carts as cartsAPI } from '../lib/api'
+import { useAuth } from './AuthContext'
 
 interface CartContextType {
   cart: CartItem[]
@@ -10,58 +12,126 @@ interface CartContextType {
   clearCart: () => void
   getTotalItems: () => number
   getTotalPrice: () => number
+  loading: boolean
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
-  const addToCart = (product: Product, color: string, size: string, quantity: number) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (item) => item.id === product.id && item.selectedColor === color && item.selectedSize === size
-      )
-
-      if (existingItem) {
-        toast.success('Đã cập nhật số lượng trong giỏ hàng!')
-        return prevCart.map((item) =>
-          item.id === product.id && item.selectedColor === color && item.selectedSize === size
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        )
-      } else {
-        toast.success('Đã thêm sản phẩm vào giỏ hàng!')
-        return [...prevCart, { ...product, quantity, selectedColor: color, selectedSize: size }]
-      }
-    })
-  }
-
-  const removeFromCart = (productId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId))
-    toast.success('Đã xóa sản phẩm khỏi giỏ hàng!')
-  }
-
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId)
-      return
+  // Load cart when user changes (login/logout)
+  useEffect(() => {
+    if (user) {
+      loadCart()
+    } else {
+      setCart([])
     }
-    setCart((prevCart) =>
-      prevCart.map((item) => (item.id === productId ? { ...item, quantity } : item))
-    )
+  }, [user?.id])
+
+  const loadCart = async () => {
+    try {
+      if (!user) {
+        setCart([])
+        return
+      }
+
+      setLoading(true)
+      const res = await cartsAPI.get()
+      const cartData = res.items || res.data?.items || []
+      setCart(cartData)
+    } catch (err: any) {
+      toast.error('Lỗi tải giỏ hàng')
+      setCart([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const clearCart = () => {
-    setCart([])
+  const addToCart = async (product: Product, color: string, size: string, quantity: number) => {
+    try {
+      if (!user) {
+        toast.error('Vui lòng đăng nhập!')
+        return
+      }
+
+      await cartsAPI.addItem({
+        productId: product.id,
+        name: product.name,
+        image: product.image,
+        quantity,
+        price: product.price,
+        selectedColor: color,
+        selectedSize: size
+      })
+
+      await loadCart()
+      toast.success('Đã thêm sản phẩm vào giỏ hàng!')
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể thêm sản phẩm')
+      console.error('[CartContext] Add to cart error:', err)
+    }
+  }
+
+  const removeFromCart = async (productId: string) => {
+    try {
+      if (!user) {
+        toast.error('Vui lòng đăng nhập!')
+        return
+      }
+
+      await cartsAPI.removeItem(productId)
+      await loadCart()
+      toast.success('Đã xóa sản phẩm khỏi giỏ hàng!')
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa sản phẩm')
+    }
+  }
+
+  const updateQuantity = async (productId: string, quantity: number) => {
+    try {
+      if (!user) {
+        toast.error('Vui lòng đăng nhập!')
+        return
+      }
+
+      if (quantity <= 0) {
+        await removeFromCart(productId)
+        return
+      }
+
+      await cartsAPI.updateItem(productId, { quantity })
+      await loadCart()
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật số lượng')
+      console.error('[CartContext] Update quantity error:', err)
+    }
+  }
+
+  const clearCart = async () => {
+    try {
+      if (!user) {
+        toast.error('Vui lòng đăng nhập!')
+        return
+      }
+
+      await cartsAPI.clear()
+      await loadCart()
+      toast.success('Đã xóa toàn bộ giỏ hàng!')
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa giỏ hàng')
+      console.error('[CartContext] Clear cart error:', err)
+    }
   }
 
   const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0)
+    return cart.reduce((total, item) => total + (item.quantity || 0), 0)
   }
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0)
+    return cart.reduce((total, item) => total + (item.price || 0) * (item.quantity || 0), 0)
   }
 
   return (
@@ -73,7 +143,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         getTotalItems,
-        getTotalPrice
+        getTotalPrice,
+        loading
       }}
     >
       {children}
@@ -88,3 +159,4 @@ export function useCart() {
   }
   return context
 }
+

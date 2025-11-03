@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Separator } from './ui/separator'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { ArrowLeft, CreditCard, Truck, CheckCircle2 } from 'lucide-react'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 
 interface CheckoutProps {
   onBack: () => void
@@ -50,7 +50,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.fullName || !formData.phone || !formData.address) {
@@ -58,34 +58,40 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
       return
     }
 
-    // Save order
-    addOrder({
-      userId: user?.id || 'guest',
-      userName: formData.fullName,
-      userEmail: formData.email || 'N/A',
-      userPhone: formData.phone,
-      items: cart.map(item => ({
-        productId: item.id,
-        productName: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        color: item.selectedColor,
-        size: item.selectedSize
-      })),
-      totalAmount: getTotalPrice(),
-      status: 'pending',
-      paymentMethod: formData.paymentMethod as 'cod' | 'banking',
-      shippingAddress: formData.address,
-      note: formData.note
-    })
+    try {
+      // Save order - send all required fields per backend schema
+      await addOrder({
+        userId: parseInt(user?.id || '1') || 1,
+        items: cart.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          color: item.selectedColor,
+          size: item.selectedSize
+        })),
+        customerInfo: {
+          name: formData.fullName,
+          email: formData.email || 'N/A',
+          phone: formData.phone,
+          address: formData.address
+        },
+        totalAmount: getTotalPrice(),
+        shippingCost: 0,
+        paymentMethod: formData.paymentMethod as 'cod' | 'banking',
+        paymentStatus: 'pending',
+        notes: formData.note
+      })
 
-    setOrderPlaced(true)
-    toast.success('Đặt hàng thành công!')
-    
-    // Clear cart after 2 seconds
-    setTimeout(() => {
-      clearCart()
-    }, 2000)
+      setOrderPlaced(true)
+      
+      // Clear cart after 2 seconds
+      setTimeout(() => {
+        clearCart()
+      }, 2000)
+    } catch (err) {
+      console.error('Order creation error:', err)
+    }
   }
 
   if (orderPlaced) {

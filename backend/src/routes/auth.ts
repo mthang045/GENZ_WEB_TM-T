@@ -29,9 +29,14 @@ router.post('/auth/register', async (req, res) => {
     const existing = await usersCollection.findOne({ email })
     if (existing) return res.status(400).json({ error: 'Email already used' })
 
+    // Get next userId (auto-increment starting from 1)
+    const lastUser = await usersCollection.findOne({}, { sort: { userId: -1 } })
+    const nextUserId = (lastUser?.userId || 0) + 1
+
     const hashed = await bcrypt.hash(password, 10)
     const result = await usersCollection.insertOne({ 
-      email, 
+      email,
+      userId: nextUserId,
       password: hashed, 
       name, 
       phone, 
@@ -42,7 +47,7 @@ router.post('/auth/register', async (req, res) => {
     })
 
     const token = jwt.sign({ sub: result.insertedId.toString(), role: 'user' }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
-    res.status(201).json({ token, user: { id: result.insertedId, email, name, role: 'user' } })
+    res.status(201).json({ token, user: { id: result.insertedId.toString(), email, name, role: 'user' } })
   } catch (err) {
     console.error('Registration error:', err)
     res.status(500).json({ error: 'Registration failed' })
@@ -67,7 +72,7 @@ router.post('/auth/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
 
     const token = jwt.sign({ sub: user._id.toString(), role: user.role }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
-    res.json({ token, user: { id: user._id, email: user.email, name: user.name, role: user.role } })
+    res.json({ token, user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role } })
   } catch (err) {
     console.error('Login error:', err)
     res.status(500).json({ error: 'Login failed' })

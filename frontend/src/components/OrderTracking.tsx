@@ -18,7 +18,7 @@ export function OrderTracking({ orders, userEmail }: OrderTrackingProps) {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
 
   // Filter orders for current user
-  const userOrders = orders.filter(order => order.userEmail === userEmail).sort((a, b) => 
+  const userOrders = orders.filter(order => order.customerInfo.email === userEmail).sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 
@@ -115,15 +115,15 @@ export function OrderTracking({ orders, userEmail }: OrderTrackingProps) {
       {userOrders.map((order) => {
         const statusInfo = getStatusInfo(order.status)
         const StatusIcon = statusInfo.icon
-        const isExpanded = expandedOrder === order.id
+        const isExpanded = expandedOrder === order._id
 
         return (
-          <Card key={order.id}>
+          <Card key={order._id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">Đơn hàng #{order.id}</CardTitle>
+                    <CardTitle className="text-lg">Đơn hàng #{order.orderId}</CardTitle>
                     <Badge className={statusInfo.color}>
                       <StatusIcon className="w-3 h-3 mr-1" />
                       {statusInfo.label}
@@ -136,7 +136,7 @@ export function OrderTracking({ orders, userEmail }: OrderTrackingProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => toggleOrder(order.id)}
+                  onClick={() => toggleOrder(order._id)}
                 >
                   {isExpanded ? (
                     <ChevronUp className="w-5 h-5" />
@@ -206,15 +206,12 @@ export function OrderTracking({ orders, userEmail }: OrderTrackingProps) {
 
                   {/* Customer Info */}
                   <div className="space-y-2 mb-4">
-                    <h4 className="text-sm">Thông tin nhận hàng:</h4>
+                    <h4 className="text-sm">Thông tin khách hàng:</h4>
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p><span className="font-medium">Người nhận:</span> {order.userName}</p>
-                      <p><span className="font-medium">Điện thoại:</span> {order.userPhone}</p>
-                      <p><span className="font-medium">Email:</span> {order.userEmail}</p>
-                      <p><span className="font-medium">Địa chỉ:</span> {order.shippingAddress}</p>
-                      {order.note && (
-                        <p><span className="font-medium">Ghi chú:</span> {order.note}</p>
-                      )}
+                      <p><span className="font-medium">Người nhận:</span> {order.customerInfo.name}</p>
+                      <p><span className="font-medium">Điện thoại:</span> {order.customerInfo.phone}</p>
+                      <p><span className="font-medium">Email:</span> {order.customerInfo.email}</p>
+                      <p><span className="font-medium">Địa chỉ:</span> {order.customerInfo.address}</p>
                     </div>
                   </div>
                 </>

@@ -7,11 +7,9 @@ export interface User {
 }
 
 export interface Order {
-  id: string
-  userId: string
-  userName: string
-  userEmail: string
-  userPhone: string
+  _id: string
+  orderId: string
+  userId: number
   items: {
     productId: string
     productName: string
@@ -20,10 +18,18 @@ export interface Order {
     color: string
     size: string
   }[]
+  customerInfo: {
+    name: string
+    email: string
+    phone: string
+    address: string
+  }
   totalAmount: number
-  status: 'pending' | 'confirmed' | 'shipping' | 'delivered' | 'cancelled'
+  shippingCost: number
   paymentMethod: 'cod' | 'banking'
-  shippingAddress: string
-  note?: string
+  paymentStatus: 'pending' | 'paid' | 'failed'
+  status: 'pending' | 'confirmed' | 'shipping' | 'delivered' | 'cancelled'
+  notes: string
   createdAt: string
+  updatedAt: string
 }

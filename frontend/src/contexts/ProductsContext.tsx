@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { Product } from '../lib/types'
-import { products as initialProducts } from '../lib/products-data'
 import { toast } from 'sonner'
 import { products as api } from '../lib/api'
 
@@ -40,8 +39,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         if (savedProducts) {
           setProducts(JSON.parse(savedProducts))
         } else {
-          setProducts(initialProducts)
-          localStorage.setItem('genz_products', JSON.stringify(initialProducts))
+          // If no API and no cache, show empty state
+          setProducts([])
         }
       } finally {
         setLoading(false)
