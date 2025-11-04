@@ -9,6 +9,7 @@ import authRouter from './routes/auth';
 import ordersRouter from './routes/orders';
 import cartsRouter from './routes/carts';
 import debugRouter from './routes/debug';
+import paymentsRouter from './routes/payments';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ export const redis = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
 redis.on('error', (err) => console.error('Redis error', err));
 
 // Mount routes
+app.use(process.env.API_PREFIX || '/api', paymentsRouter);
 app.use(process.env.API_PREFIX || '/api', productsRouter);
 app.use(process.env.API_PREFIX || '/api', authRouter);
 app.use(process.env.API_PREFIX || '/api', ordersRouter);

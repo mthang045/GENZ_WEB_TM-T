@@ -8,8 +8,9 @@ import { Textarea } from './ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Separator } from './ui/separator'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { ArrowLeft, CreditCard, Truck, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, CreditCard, Truck, CheckCircle2, Loader } from 'lucide-react'
 import { toast } from 'sonner'
+import { apiFetch } from '../lib/api'
 
 interface CheckoutProps {
   onBack: () => void
@@ -20,6 +21,8 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   const { cart, getTotalPrice, clearCart } = useCart()
   const { user, addOrder } = useAuth()
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -50,6 +53,33 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     }
   }
 
+  const handleVNPayPayment = async (orderId: string, amount: number) => {
+    try {
+      setIsProcessing(true)
+      const response = await apiFetch('api/vnpay/create-payment', {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId,
+          orderDescription: `Payment for order ${orderId}`,
+          returnUrl: `http://localhost:4000/api/vnpay/return` // Backend URL để xử lý
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (response.success && response.paymentUrl) {
+        // Redirect to VNPay payment gateway
+        window.location.href = response.paymentUrl
+      } else {
+        toast.error('Lỗi tạo URL thanh toán!')
+      }
+    } catch (error) {
+      console.error('VNPay payment error:', error)
+      toast.error('Lỗi khi kết nối VNPay')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -59,37 +89,84 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     }
 
     try {
-      // Save order - backend will get userId from JWT token
-      await addOrder({
-        items: cart.map(item => ({
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          color: item.selectedColor,
-          size: item.selectedSize
-        })),
-        customerInfo: {
-          name: formData.fullName,
-          email: formData.email || 'N/A',
-          phone: formData.phone,
-          address: formData.address
-        },
-        totalAmount: getTotalPrice(),
-        shippingCost: 0,
-        paymentMethod: formData.paymentMethod as 'cod' | 'banking',
-        paymentStatus: 'pending',
-        notes: formData.note
-      })
-
-      setOrderPlaced(true)
+      setIsProcessing(true)
       
-      // Clear cart after 2 seconds
-      setTimeout(() => {
-        clearCart()
-      }, 2000)
+      // Chỉ tạo order khi không dùng VNPay
+      // Nếu dùng VNPay, tạo order ở sau khi thanh toán thành công
+      if (formData.paymentMethod !== 'vnpay') {
+        // Create order directly via API
+        const orderResponse = await apiFetch('api/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            items: cart.map(item => ({
+              productId: item.id,
+              productName: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              color: item.selectedColor,
+              size: item.selectedSize
+            })),
+            customerInfo: {
+              name: formData.fullName,
+              email: formData.email || 'N/A',
+              phone: formData.phone,
+              address: formData.address
+            },
+            totalAmount: getTotalPrice(),
+            shippingCost: 0,
+            paymentMethod: formData.paymentMethod as any,
+            paymentStatus: 'pending',
+            notes: formData.note
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+
+        setCreatedOrderId(orderResponse.data._id)
+        setOrderPlaced(true)
+        
+        // Clear cart after 2 seconds
+        setTimeout(() => {
+          clearCart()
+        }, 2000)
+      } else {
+        // Với VNPay, tạo order rồi gọi create-payment
+        const orderResponse = await apiFetch('api/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            items: cart.map(item => ({
+              productId: item.id,
+              productName: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              color: item.selectedColor,
+              size: item.selectedSize
+            })),
+            customerInfo: {
+              name: formData.fullName,
+              email: formData.email || 'N/A',
+              phone: formData.phone,
+              address: formData.address
+            },
+            totalAmount: getTotalPrice(),
+            shippingCost: 0,
+            paymentMethod: 'vnpay',
+            paymentStatus: 'pending',
+            notes: formData.note
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+
+        const orderId = orderResponse.data._id
+        setCreatedOrderId(orderId)
+
+        // Gọi VNPay payment
+        await handleVNPayPayment(orderId, getTotalPrice())
+      }
     } catch (err) {
       console.error('Order creation error:', err)
+      toast.error('Lỗi tạo đơn hàng')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -280,6 +357,25 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
                   </div>
                 </label>
 
+                <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:border-pink-500 transition-colors ${
+                  formData.paymentMethod === 'vnpay' ? 'border-pink-500 bg-pink-50' : ''
+                }`}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="vnpay"
+                    checked={formData.paymentMethod === 'vnpay'}
+                    onChange={handleInputChange}
+                    className="text-pink-500"
+                  />
+                  <div className="flex-1">
+                    <div>Thanh toán VNPay</div>
+                    <div className="text-sm text-gray-500">
+                      Thanh toán trực tuyến an toàn qua VNPay
+                    </div>
+                  </div>
+                </label>
+
                 {/* Banking Info */}
                 {showBankingInfo && (
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
@@ -371,14 +467,25 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
               <Button
                 size="lg"
-                className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white disabled:opacity-50"
                 onClick={handleSubmit}
+                disabled={isProcessing}
               >
-                Đặt Hàng
+                {isProcessing ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Đặt Hàng'
+                )}
               </Button>
 
               <p className="text-xs text-gray-500 text-center">
-                Bằng cách đặt hàng, bạn đồng ý với các điều khoản sử dụng của chúng tôi
+                {formData.paymentMethod === 'vnpay' 
+                  ? 'Bạn sẽ được chuyển hướng đến trang thanh toán VNPay để hoàn tất thanh toán'
+                  : 'Bằng cách đặt hàng, bạn đồng ý với các điều khoản sử dụng của chúng tôi'
+                }
               </p>
             </CardContent>
           </Card>

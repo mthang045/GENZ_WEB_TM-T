@@ -22,6 +22,7 @@ export interface Product {
 }
 
 export interface CartItem extends Product {
+  productId: string
   quantity: number
   selectedColor: string
   selectedSize: string

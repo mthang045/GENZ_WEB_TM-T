@@ -9,6 +9,7 @@ import { Footer } from './components/Footer'
 import { CartPage } from './components/CartPage'
 import { ProductDetailPage } from './components/ProductDetailPage'
 import { Checkout } from './components/Checkout'
+import { PaymentResult } from './components/PaymentResult'
 import { Login } from './components/Login'
 import { Register } from './components/Register'
 import { UserProfile } from './components/UserProfile'
@@ -145,6 +146,11 @@ function AppContent() {
           onBack={handleBackFromCheckout}
           onSuccess={handleBackToHome}
         />
+      } />
+      <Route path="/checkout/success" element={
+        <PageLayout>
+          <PaymentResult />
+        </PageLayout>
       } />
       <Route path="/login" element={
         <Login 

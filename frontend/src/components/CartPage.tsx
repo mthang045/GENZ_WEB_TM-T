@@ -61,7 +61,7 @@ export function CartPage({ onBack, onCheckout }: CartPageProps) {
                 <CardContent className="space-y-4">
                   {cart.map((item) => (
                     <div
-                      key={`${item.id}-${item.selectedColor}-${item.selectedSize}`}
+                      key={`${item.productId}-${item.selectedColor}-${item.selectedSize}`}
                       className="flex gap-4 p-4 border rounded-lg hover:border-pink-200 transition-colors"
                     >
                       {/* Product Image */}
@@ -89,7 +89,7 @@ export function CartPage({ onBack, onCheckout }: CartPageProps) {
                               variant="outline"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(`${item.productId}-${item.selectedColor}-${item.selectedSize}`, item.quantity - 1)}
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
@@ -98,7 +98,7 @@ export function CartPage({ onBack, onCheckout }: CartPageProps) {
                               variant="outline"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(`${item.productId}-${item.selectedColor}-${item.selectedSize}`, item.quantity + 1)}
                               disabled={item.quantity >= 10}
                             >
                               <Plus className="w-4 h-4" />
@@ -122,7 +122,7 @@ export function CartPage({ onBack, onCheckout }: CartPageProps) {
                         variant="ghost"
                         size="sm"
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 self-start"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(`${item.productId}-${item.selectedColor}-${item.selectedSize}`)}
                       >
                         <Trash2 className="w-5 h-5" />
                       </Button>

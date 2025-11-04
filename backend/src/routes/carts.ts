@@ -128,30 +128,75 @@ router.post('/carts/items', authMiddleware, async (req: Request, res: Response) 
 router.put('/carts/items/:productId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as string;
-    const { productId } = req.params;
+    const itemKey = req.params.productId;
     const { quantity } = req.body;
 
     if (!quantity || quantity < 0) {
       return res.status(400).json({ error: 'Invalid quantity' });
     }
 
+    // Parse composite key: "productId-color-size" or just "productId"
+    let filterCriteria: any = {};
+    let findCriteria: any = {};
+    
+    if (itemKey.includes('-')) {
+      // Composite key: "id-color-size"
+      const [productId, color, size] = itemKey.split('-');
+      filterCriteria = {
+        productId: productId,
+        selectedColor: color,
+        selectedSize: size
+      };
+      findCriteria = {
+        userId,
+        'items.productId': productId,
+        'items.selectedColor': color,
+        'items.selectedSize': size
+      };
+    } else {
+      // Just productId
+      filterCriteria = { productId: itemKey };
+      findCriteria = { userId, 'items.productId': itemKey };
+    }
+
     if (quantity === 0) {
       // Remove item
       await db.collection('carts').updateOne(
         { userId },
-        { $pull: { items: { productId } }, $set: { updatedAt: new Date() } }
+        { $pull: { items: filterCriteria }, $set: { updatedAt: new Date() } }
       );
     } else {
       // First get the item to get price
       const cartDoc = await db.collection('carts').findOne({ userId });
-      const item = cartDoc?.items?.find((i: CartItem) => i.productId === productId);
+      const item = cartDoc?.items?.find((i: CartItem) => {
+        if (itemKey.includes('-')) {
+          const [productId, color, size] = itemKey.split('-');
+          return i.productId === productId && i.selectedColor === color && i.selectedSize === size;
+        }
+        return i.productId === itemKey;
+      });
       const price = item?.price || 0;
       
-      // Update quantity and subtotal
-      await db.collection('carts').updateOne(
-        { userId, 'items.productId': productId },
-        { $set: { 'items.$.quantity': quantity, 'items.$.subtotal': quantity * price, updatedAt: new Date() } }
-      );
+      // Update quantity and subtotal based on composite key match
+      const cartDoc2 = await db.collection('carts').findOne({ userId });
+      const itemIndex = cartDoc2?.items?.findIndex((i: CartItem) => {
+        if (itemKey.includes('-')) {
+          const [productId, color, size] = itemKey.split('-');
+          return i.productId === productId && i.selectedColor === color && i.selectedSize === size;
+        }
+        return i.productId === itemKey;
+      });
+
+      if (itemIndex >= 0) {
+        await db.collection('carts').updateOne(
+          { userId },
+          { $set: { 
+            [`items.${itemIndex}.quantity`]: quantity, 
+            [`items.${itemIndex}.subtotal`]: quantity * price,
+            updatedAt: new Date()
+          } }
+        );
+      }
     }
 
     // Get updated cart and calculate totalPrice
@@ -181,11 +226,27 @@ router.put('/carts/items/:productId', authMiddleware, async (req: Request, res: 
 router.delete('/carts/items/:productId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as string;
-    const { productId } = req.params;
+    const itemKey = req.params.productId;
+
+    // itemKey format: "productId-color-size" or just "productId"
+    let filterCriteria: any = {};
+    
+    if (itemKey.includes('-')) {
+      // Composite key: "id-color-size"
+      const [productId, color, size] = itemKey.split('-');
+      filterCriteria = {
+        productId: productId,
+        selectedColor: color,
+        selectedSize: size
+      };
+    } else {
+      // Just productId
+      filterCriteria = { productId: itemKey };
+    }
 
     await db.collection('carts').updateOne(
       { userId },
-      { $pull: { items: { productId } }, $set: { updatedAt: new Date() } }
+      { $pull: { items: filterCriteria }, $set: { updatedAt: new Date() } }
     );
 
     // Get updated cart and calculate totalPrice
