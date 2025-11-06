@@ -57,6 +57,9 @@ export function AllProducts({ onProductClick, searchQuery = '' }: AllProductsPro
       )
     }
 
+    // Filter by stock availability (only show in-stock products, default to true if inStock is undefined)
+    filtered = filtered.filter(product => product.inStock !== false)
+
     // Filter by category
     if (selectedCategory !== 'Tất cả') {
       filtered = filtered.filter((product) => product.category === selectedCategory)

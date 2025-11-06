@@ -21,7 +21,31 @@ export function ProductDetailPage({ product, onBack, onProductClick }: ProductDe
   const [selectedColor, setSelectedColor] = useState<string>('')
   const [selectedSize, setSelectedSize] = useState<string>('')
   const [quantity, setQuantity] = useState(1)
-  const [mainImage, setMainImage] = useState(product.image)
+  const [mainImage, setMainImage] = useState(product?.image || '')
+
+  // If product is null (page reload), show loading or redirect
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-16">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="mb-6 hover:text-pink-500"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Quay Lại
+          </Button>
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">Không tìm thấy sản phẩm</p>
+            <Button onClick={onBack} className="bg-pink-500 hover:bg-pink-600">
+              Về Trang Chủ
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Reset selections when product changes
   useEffect(() => {

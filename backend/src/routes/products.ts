@@ -22,14 +22,20 @@ router.get('/products', async (req, res) => {
     const productsCollection = db.collection('products');
     const products = await productsCollection.find({}).toArray();
     
+    // Ensure inStock field is present and defaults to true if not specified
+    const productsWithStock = products.map((product: any) => ({
+      ...product,
+      inStock: product.inStock !== undefined ? product.inStock : (product.stock !== undefined ? product.stock > 0 : true)
+    }));
+    
     try {
-      await redis.set(cacheKey, JSON.stringify(products), 'EX', 60);
+      await redis.set(cacheKey, JSON.stringify(productsWithStock), 'EX', 60);
     } catch (redisErr) {
       const e: any = redisErr as any
       console.warn('Failed to set redis cache:', e.message || e);
     }
     
-    return res.json({ source: 'db', data: products });
+    return res.json({ source: 'db', data: productsWithStock });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch products' });

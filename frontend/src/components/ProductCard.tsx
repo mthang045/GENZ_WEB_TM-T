@@ -20,7 +20,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
   return (
     <Card 
-      className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-gray-200 h-full flex flex-col"
+      className={`group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-gray-200 h-full flex flex-col ${!product.inStock ? 'opacity-60 pointer-events-none' : ''}`}
       onClick={() => onQuickView(product)}
     >
       <div className="relative overflow-hidden aspect-square bg-gray-100">

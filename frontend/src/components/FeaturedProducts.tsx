@@ -10,8 +10,10 @@ interface FeaturedProductsProps {
 
 export function FeaturedProducts({ onProductClick, onViewAll }: FeaturedProductsProps) {
   const { products } = useProducts()
-  // Show first 8 products as featured for better carousel experience
-  const featuredProducts = products.slice(0, 8)
+  // Filter products that are in stock (default to true if inStock is not specified)
+  const featuredProducts = products
+    .filter(product => product.inStock !== false)
+    .slice(0, 8)
 
   return (
     <section className="py-20 bg-gray-50">
