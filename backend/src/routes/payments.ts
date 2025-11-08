@@ -142,6 +142,39 @@ router.get('/vnpay/return', async (req: Request, res: Response) => {
           },
         }
       );
+      
+      // Giảm inventory khi thanh toán VNPay thành công
+      const order = await ordersCollection.findOne({ _id: payment.orderId });
+      if (order && order.items) {
+        const productsCollection = db.collection('products');
+        for (const item of order.items) {
+          try {
+            const productId = new ObjectId(item.productId);
+            const product = await productsCollection.findOne({ _id: productId });
+            
+            if (product && product.stock) {
+              // Tìm stock variant (color + size) và giảm quantity
+              const stockVariant = product.stock.find(
+                (s: any) => s.color === item.color && s.size === item.size
+              );
+              
+              if (stockVariant) {
+                const newQuantity = Math.max(0, stockVariant.quantity - item.quantity);
+                
+                // Update stock array
+                await productsCollection.updateOne(
+                  { _id: productId, 'stock.color': item.color, 'stock.size': item.size },
+                  { $set: { 'stock.$.quantity': newQuantity, updatedAt: new Date() } }
+                );
+                
+                console.log(`[VNPay Inventory] Reduced ${item.productName} (${item.color}/${item.size}): ${stockVariant.quantity} → ${newQuantity}`);
+              }
+            }
+          } catch (err) {
+            console.error(`[VNPay Inventory Error] Failed to update product ${item.productId}:`, err);
+          }
+        }
+      }
     } else {
       // Nếu thanh toán thất bại, xóa order
       console.log(`[VNPay Return] Deleting order: ${payment.orderId}`);

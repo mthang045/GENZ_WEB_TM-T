@@ -2,10 +2,27 @@ import { TrendingUp, Package, ShoppingBag, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProducts } from '../../contexts/ProductsContext'
+import { useEffect, useState } from 'react'
+import { orders as apiOrders } from '../../lib/api'
+import { Order } from '../../lib/auth-types'
 
 export function AdminStats() {
-  const { orders } = useAuth()
+  const { user } = useAuth()
   const { products } = useProducts()
+  const [orders, setOrders] = useState<Order[]>([])
+
+  // Load orders from API when admin loads
+  useEffect(() => {
+    let mounted = true
+    if (user?.role === 'admin') {
+      apiOrders.list().then((res) => {
+        if (!mounted) return
+        const data = res.data || []
+        setOrders(data)
+      }).catch(err => console.error('Failed to load orders', err))
+    }
+    return () => { mounted = false }
+  }, [user])
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0)
   const totalOrders = orders.length

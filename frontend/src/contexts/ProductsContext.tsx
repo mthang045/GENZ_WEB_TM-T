@@ -27,11 +27,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true)
         const res = await api.list()
+        console.log('[ProductsContext] API Response:', res)
         const data = res.data || res
+        console.log('[ProductsContext] Parsed data:', data)
         if (!mounted) return
-        setProducts(data)
+        setProducts(Array.isArray(data) ? data : [])
       } catch (err: any) {
-        console.error('Failed to load products from API', err)
+        console.error('[ProductsContext] Failed to load products from API', err)
         setError(err?.message || String(err))
         setProducts([])
       } finally {

@@ -65,10 +65,21 @@ export function AdminProducts() {
     }).format(price)
   }
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredProducts = products
+    .map((p: any) => {
+      // Normalize product: calculate inStock from stock array
+      let inStock = true
+      if (Array.isArray(p.stock)) {
+        inStock = p.stock.some((s: any) => s.quantity > 0)
+      } else if (typeof p.stock === 'number') {
+        inStock = p.stock > 0
+      }
+      return { ...p, inStock }
+    })
+    .filter(product =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product)

@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { db } from '../app'
+import fs from 'fs'
+import path from 'path'
 
 const router = Router()
 
@@ -24,6 +26,31 @@ router.post('/debug/promote', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed' })
+  }
+})
+
+// POST /api/debug/reset-products - Reload products from genz.products.json
+router.post('/debug/reset-products', async (req, res) => {
+  const key = req.headers['x-debug-key'] || req.body.debugKey
+  if (!key || key !== process.env.DEBUG_KEY) return res.status(403).json({ error: 'Forbidden' })
+  
+  try {
+    const productsFilePath = path.join(__dirname, '../../data/genz.products.json')
+    const jsonData = fs.readFileSync(productsFilePath, 'utf-8')
+    const products = JSON.parse(jsonData)
+    
+    const productsCollection = db.collection('products')
+    
+    // Clear existing products
+    await productsCollection.deleteMany({})
+    
+    // Insert new products
+    const result = await productsCollection.insertMany(products)
+    
+    res.json({ ok: true, inserted: result.insertedCount })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to reset products' })
   }
 })
 

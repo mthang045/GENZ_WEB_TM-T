@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 interface AuthContextType {
   user: User | null
+  loading: boolean
   login: (email: string, password: string) => Promise<boolean>
   register: (email: string, password: string, name: string) => Promise<boolean>
   logout: () => void
@@ -18,18 +19,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock admin account
-const ADMIN_ACCOUNT = {
-  email: 'admin@genz.vn',
-  password: 'admin123',
-  id: 'admin-001',
-  name: 'Admin GENZ',
-  role: 'admin' as const,
-  createdAt: new Date().toISOString()
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
 
   // Load user from localStorage and orders from API on mount
@@ -37,8 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clean up old localStorage keys
     localStorage.removeItem('genz_products')
 
-    // Load user from localStorage (persist session)
+    // Load token AND user from localStorage FIRST
+    const savedToken = localStorage.getItem('genz_token')
     const savedUser = localStorage.getItem('genz_user')
+    
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser))
@@ -47,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Load orders from API
+    // Load orders from API (will use token from localStorage)
     const loadOrders = async () => {
       try {
         const res = await apiOrders.list()
@@ -55,10 +49,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOrders(data)
       } catch (err: any) {
         console.error('Failed to load orders from API', err)
+      } finally {
+        // Mark loading as done after trying to load orders (with or without error)
+        setLoading(false)
       }
     }
 
-    loadOrders()
+    if (savedToken && savedUser) {
+      loadOrders()
+    } else {
+      // No saved session, mark loading as done immediately
+      setLoading(false)
+    }
   }, [])
 
   const loadOrdersFromAPI = async () => {
@@ -72,22 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Try admin account first (local demo)
-    if (email === ADMIN_ACCOUNT.email && password === ADMIN_ACCOUNT.password) {
-      const adminUser = {
-        id: ADMIN_ACCOUNT.id,
-        email: ADMIN_ACCOUNT.email,
-        name: ADMIN_ACCOUNT.name,
-        role: ADMIN_ACCOUNT.role,
-        createdAt: ADMIN_ACCOUNT.createdAt
-      }
-      setUser(adminUser)
-      localStorage.setItem('genz_user', JSON.stringify(adminUser))
-      await loadOrdersFromAPI()
-      toast.success('Đăng nhập thành công!')
-      return true
-    }
-
     try {
       const res = await apiAuth.login({ email, password })
       // Expect response { token, user }
@@ -185,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         register,
         logout,

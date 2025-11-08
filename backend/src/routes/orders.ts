@@ -19,17 +19,24 @@ router.get('/orders', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Query user collection to get userId field (int)
+    // Query user collection to get userId field (int) and role
     const usersCollection = db.collection('users')
     const user = await usersCollection.findOne({ _id: new ObjectId(userIdFromToken) })
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    const userId = user.userId // This is the numeric userId (int)
+    // If admin, return all orders. If regular user, filter by userId
+    let orders
+    if (user.role === 'admin') {
+      // Admin sees all orders
+      orders = await ordersCollection.find({}).sort({ createdAt: -1 }).toArray()
+    } else {
+      // Regular user sees only their orders
+      const userId = user.userId // This is the numeric userId (int)
+      orders = await ordersCollection.find({ "customerInfo.userId": userId }).sort({ createdAt: -1 }).toArray()
+    }
     
-    // Query orders by customerInfo.userId (int)
-    const orders = await ordersCollection.find({ "customerInfo.userId": userId }).sort({ createdAt: -1 }).toArray()
     res.json({ data: orders })
   } catch (err) {
     console.error(err)
@@ -100,17 +107,79 @@ router.get('/orders/:id', async (req, res) => {
   }
 })
 
+// Helper: Giảm inventory khi đơn hàng được giao (COD) hoặc thanh toán thành công (VNPay)
+const decrementInventory = async (orderId: string) => {
+  try {
+    const ordersCollection = db.collection('orders')
+    const productsCollection = db.collection('products')
+    
+    const order = await ordersCollection.findOne({ _id: new ObjectId(orderId) })
+    if (!order) return false
+    
+    // Giảm inventory cho từng item trong đơn hàng
+    for (const item of order.items) {
+      const productId = new ObjectId(item.productId)
+      const product = await productsCollection.findOne({ _id: productId })
+      
+      if (!product) {
+        console.warn(`[Inventory] Product ${item.productId} not found`)
+        continue
+      }
+      
+      // Tìm stock variant (color + size) và giảm quantity
+      const stockVariant = product.stock?.find(
+        (s: any) => s.color === item.color && s.size === item.size
+      )
+      
+      if (stockVariant) {
+        const newQuantity = Math.max(0, stockVariant.quantity - item.quantity)
+        
+        // Update stock array
+        await productsCollection.updateOne(
+          { _id: productId, 'stock.color': item.color, 'stock.size': item.size },
+          { $set: { 'stock.$.quantity': newQuantity, updatedAt: new Date() } }
+        )
+        
+        console.log(`[Inventory] Reduced ${item.productName} (${item.color}/${item.size}): ${stockVariant.quantity} → ${newQuantity}`)
+      } else {
+        console.warn(`[Inventory] Stock variant not found for ${item.productName} ${item.color}/${item.size}`)
+      }
+    }
+    return true
+  } catch (err) {
+    console.error('[Inventory Error]', err)
+    return false
+  }
+}
+
 // PATCH /api/orders/:id/status
+// Khi status → 'delivered' (COD) hoặc order có paymentStatus='completed' (VNPay), giảm inventory
 router.patch('/orders/:id/status', requireAdmin, async (req, res) => {
   try {
     const { status } = req.body
     const ordersCollection = db.collection('orders')
+    
+    const order = await ordersCollection.findOne({ _id: new ObjectId(req.params.id) })
+    if (!order) return res.status(404).json({ error: 'Order not found' })
+    
+    // Cập nhật status
     const result = await ordersCollection.findOneAndUpdate(
       { _id: new ObjectId(req.params.id) },
       { $set: { status, updatedAt: new Date() } },
       { returnDocument: 'after' }
     )
-    if (!result.value) return res.status(404).json({ error: 'Order not found' })
+    
+    // Nếu status → 'delivered' hoặc 'completed', giảm inventory
+    if (status === 'delivered' || status === 'completed') {
+      const shouldDecrement = 
+        (status === 'delivered' && order.paymentMethod === 'cod') || // COD giao thành công
+        (status === 'completed' && order.paymentStatus === 'completed') // VNPay/Banking đã thanh toán
+      
+      if (shouldDecrement) {
+        await decrementInventory(req.params.id)
+      }
+    }
+    
     res.json({ data: result.value })
   } catch (err) {
     console.error(err)

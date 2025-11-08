@@ -6,6 +6,7 @@
 Collection: products
 {
   _id: ObjectId,
+  id?: string,
   name: string (required),
   description?: string,
   price: number (required),
@@ -15,9 +16,13 @@ Collection: products
   category?: string,
   rating?: number,
   features?: string[],
-  color?: string[],
-  size?: string[],
-  stock?: number (default: 0),
+  colors?: string[],
+  sizes?: string[],
+  stock?: Array<{
+    color: string,
+    size: string,
+    quantity: number
+  }>,
   weight?: string,
   certification?: string[],
   createdAt: Date,

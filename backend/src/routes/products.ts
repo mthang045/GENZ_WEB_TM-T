@@ -22,11 +22,28 @@ router.get('/products', async (req, res) => {
     const productsCollection = db.collection('products');
     const products = await productsCollection.find({}).toArray();
     
-    // Ensure inStock field is present and defaults to true if not specified
-    const productsWithStock = products.map((product: any) => ({
-      ...product,
-      inStock: product.inStock !== undefined ? product.inStock : (product.stock !== undefined ? product.stock > 0 : true)
-    }));
+    // Calculate inStock based on stock array (new structure)
+    const productsWithStock = products.map((product: any) => {
+      let inStock = true;
+      
+      // If stock is array (new structure), check if any variant has quantity > 0
+      if (Array.isArray(product.stock) && product.stock.length > 0) {
+        inStock = product.stock.some((s: any) => s.quantity > 0);
+      } 
+      // Legacy support: if stock is number
+      else if (typeof product.stock === 'number') {
+        inStock = product.stock > 0;
+      }
+      // If no stock info, default to true
+      else {
+        inStock = true;
+      }
+      
+      return {
+        ...product,
+        inStock: product.inStock !== undefined && product.inStock !== null ? product.inStock : inStock
+      };
+    });
     
     try {
       await redis.set(cacheKey, JSON.stringify(productsWithStock), 'EX', 60);

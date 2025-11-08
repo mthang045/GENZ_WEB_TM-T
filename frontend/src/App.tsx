@@ -22,7 +22,7 @@ import { Product } from './lib/types'
 
 
 function AppContent() {
-  const { user, isAdmin } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
@@ -170,7 +170,14 @@ function AppContent() {
         <UserProfile onBack={handleBackToHome} />
       } />
       <Route path="/admin" element={
-        user && isAdmin() ? (
+        loading ? (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+              <p>Đang tải...</p>
+            </div>
+          </div>
+        ) : user && isAdmin() ? (
           <div className="min-h-screen">
             <AdminDashboard onLogout={handleBackToHome} />
             <Toaster position="top-right" />

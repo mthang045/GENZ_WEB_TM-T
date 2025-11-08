@@ -10,8 +10,20 @@ interface FeaturedProductsProps {
 
 export function FeaturedProducts({ onProductClick, onViewAll }: FeaturedProductsProps) {
   const { products } = useProducts()
-  // Filter products that are in stock (default to true if inStock is not specified)
-  const featuredProducts = products
+  
+  // Normalize products and calculate inStock from stock array
+  const normalizedProducts = products.map((p: any) => {
+    let inStock = true
+    if (Array.isArray(p.stock)) {
+      inStock = p.stock.some((s: any) => s.quantity > 0)
+    } else if (typeof p.stock === 'number') {
+      inStock = p.stock > 0
+    }
+    return { ...p, inStock }
+  })
+  
+  // Filter products that are in stock and get first 8
+  const featuredProducts = normalizedProducts
     .filter(product => product.inStock !== false)
     .slice(0, 8)
 

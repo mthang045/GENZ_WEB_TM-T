@@ -28,22 +28,34 @@ export function AllProducts({ onProductClick, searchQuery = '' }: AllProductsPro
 
   const filteredProducts = useMemo(() => {
     // products may come from backend with _id and different fields; normalize
-    const normalize = (p: any) => ({
-      id: p.id || p._id || String(p._id || Math.random()),
-      name: p.name || p.title || 'No name',
-      price: p.price ?? 0,
-      image: (p.images && p.images[0]) || p.image || '',
-      category: p.category || 'Khác',
-      brand: p.brand || 'GenZ',
-      rating: p.rating ?? 0,
-      description: p.description || '',
-      features: p.features || [],
-      colors: p.colors || [],
-      sizes: p.sizes || [],
-      inStock: (p.stock ?? p.inStock ?? 0) > 0,
-      inventory: p.inventory || [],
-      colorImages: p.colorImages || {},
-    })
+    const normalize = (p: any) => {
+      // Calculate inStock based on stock array
+      let inStock = true
+      if (Array.isArray(p.stock)) {
+        inStock = p.stock.some((s: any) => s.quantity > 0)
+      } else if (typeof p.stock === 'number') {
+        inStock = p.stock > 0
+      } else if (p.inStock !== undefined) {
+        inStock = p.inStock
+      }
+      
+      return {
+        id: p.id || p._id || String(p._id || Math.random()),
+        name: p.name || p.title || 'No name',
+        price: p.price ?? 0,
+        image: (p.images && p.images[0]) || p.image || '',
+        category: p.category || 'Khác',
+        brand: p.brand || 'GenZ',
+        rating: p.rating ?? 0,
+        description: p.description || '',
+        features: p.features || [],
+        colors: p.colors || [],
+        sizes: p.sizes || [],
+        inStock,
+        inventory: p.inventory || [],
+        colorImages: p.colorImages || {},
+      }
+    }
 
     let filtered = products.map(normalize)
 
