@@ -1,17 +1,12 @@
-FROM node:18-alpine AS build
+FROM node:18-alpine
 WORKDIR /usr/src/app
 
-# Install deps and build
+# Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm install --include=dev || npm install
-COPY . .
-RUN npm install typescript@latest --no-audit --no-fund || true
-RUN npx tsc -p tsconfig.json
+RUN npm install --omit=dev --no-audit --no-fund || npm install
 
-FROM node:18-alpine AS runtime
-WORKDIR /usr/src/app
-COPY --from=build /usr/src/app/package.json ./
-COPY --from=build /usr/src/app/dist ./dist
-RUN npm install --omit=dev --no-audit --no-fund || true
+# Copy source code
+COPY src ./src
+
 EXPOSE 4000
-CMD ["node", "dist/index.js"]
+CMD ["node", "src/index.js"]
