@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { ProductCard } from './ProductCard';
-import React from 'react';
 
 export function ProductCarousel({ products, onProductClick }) {
     const scrollContainerRef = useRef(null);

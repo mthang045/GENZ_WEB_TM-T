@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { useAuth } from '../contexts/AuthContext';
-import React from 'react';
 
 export function UserProfile({ onBack }) {
     const { user, getUserOrders, logout } = useAuth();

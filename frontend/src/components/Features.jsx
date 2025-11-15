@@ -1,6 +1,5 @@
 import { Shield, Zap, Award, Truck } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
-import React from 'react';
 
 const features = [
     {

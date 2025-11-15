@@ -8,7 +8,6 @@ import { categories, priceRanges } from '../lib/filter-constants';
 import { Badge } from './ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
-import React from 'react';
 
 const PRODUCTS_PER_ROW = 4;
 export function AllProducts({ onProductClick, searchQuery = '' }) {

@@ -1,7 +1,6 @@
 import { Button } from './ui/button';
 import { ProductCarousel } from './ProductCarousel';
 import { useProducts } from '../contexts/ProductsContext';
-import React from 'react';
 
 export function FeaturedProducts({ onProductClick, onViewAll }) {
     const { products } = useProducts();

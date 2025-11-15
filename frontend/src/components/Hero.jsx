@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Đã import React ở đây
+import { useState, useEffect } from 'react'; 
 import { Button } from './ui/button'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 // Xóa 'interface HeroProps'

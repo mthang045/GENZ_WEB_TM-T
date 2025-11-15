@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-// Bạn cần import `useSearchParams` và `useNavigate` từ 'react-router-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'; 
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -7,7 +6,6 @@ import { CheckCircle2, XCircle, Loader } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useCart } from '../contexts/CartContext';
 import { toast } from 'sonner';
-import React from 'react';
 
 export function PaymentResult() {
     const [searchParams] = useSearchParams();

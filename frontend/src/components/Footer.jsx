@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import logo from '../assets/f78e3c35da8a6df43c6fe4dc2c4c28f2a6e85644.png';
-import React from 'react';
 
 export function Footer() {
   const [logoError, setLogoError] = useState(false);
@@ -47,11 +46,11 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-6">Liên Kết Nhanh</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Trang chủ</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Sản phẩm</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Thương hiệu</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Về chúng tôi</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Liên hệ</a></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Trang chủ</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Sản phẩm</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Thương hiệu</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Về chúng tôi</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Liên hệ</button></li>
             </ul>
           </div>
 
@@ -59,11 +58,11 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-6">Hỗ Trợ Khách Hàng</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Hướng dẫn mua hàng</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Chính sách đổi trả</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Bảo hành</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Câu hỏi thường gặp</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-pink-400 transition-colors">Giao hàng</a></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Hướng dẫn mua hàng</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Chính sách đổi trả</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Bảo hành</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Câu hỏi thường gặp</button></li>
+              <li><button className="text-gray-400 hover:text-pink-400 transition-colors text-left">Giao hàng</button></li>
             </ul>
           </div>
 

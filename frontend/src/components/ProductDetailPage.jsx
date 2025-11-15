@@ -7,7 +7,6 @@ import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { ProductCard } from './ProductCard';
-import React from 'react';
 
 export function ProductDetailPage({ product, onBack, onProductClick }) {
     const { addToCart } = useCart();

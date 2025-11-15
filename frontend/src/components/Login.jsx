@@ -12,7 +12,6 @@ import {
 } from './ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/f78e3c35da8a6df43c6fe4dc2c4c28f2a6e85644.png';
-import React from 'react';
 
 export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
   const { login } = useAuth();

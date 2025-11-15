@@ -5,7 +5,6 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useCart } from '../contexts/CartContext';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import React from 'react';
 
 export function ProductDetailDialog({ product, open, onClose }) {
     const { addToCart } = useCart();
