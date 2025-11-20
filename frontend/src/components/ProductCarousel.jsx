@@ -8,7 +8,7 @@ export function ProductCarousel({ products, onProductClick }) {
 
     const scroll = (direction) => {
         if (scrollContainerRef.current) {
-            const scrollAmount = 400; // Độ dài cuộn
+            const scrollAmount = 400;
             const newScrollLeft = scrollContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
             
             scrollContainerRef.current.scrollTo({
@@ -20,7 +20,6 @@ export function ProductCarousel({ products, onProductClick }) {
 
     return (
         <div className="relative group">
-            {/* Nút cuộn trái */}
             <Button
                 variant="outline"
                 size="icon"

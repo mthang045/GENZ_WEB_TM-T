@@ -7,9 +7,11 @@ router.get('/products', async (req, res) => {
     try {
         const cacheKey = 'products:all';
         try {
-            const cached = await redis.get(cacheKey);
-            if (cached) {
-                return res.json({ source: 'cache', data: JSON.parse(cached) });
+            if (redis) {
+                const cached = await redis.get(cacheKey);
+                if (cached) {
+                    return res.json({ source: 'cache', data: JSON.parse(cached) });
+                }
             }
         }
         catch (redisErr) {
@@ -36,7 +38,9 @@ router.get('/products', async (req, res) => {
             return Object.assign(Object.assign({}, product), { inStock: product.inStock !== undefined && product.inStock !== null ? product.inStock : inStock });
         });
         try {
-            await redis.set(cacheKey, JSON.stringify(productsWithStock), 'EX', 60);
+            if (redis) {
+                await redis.set(cacheKey, JSON.stringify(productsWithStock), 'EX', 60);
+            }
         }
         catch (redisErr) {
             const e = redisErr;
@@ -56,7 +60,9 @@ router.post('/products', requireAdmin, async (req, res) => {
         const productsCollection = db.collection('products');
         const result = await productsCollection.insertOne(payload);
         try {
-            await redis.del('products:all');
+            if (redis) {
+                await redis.del('products:all');
+            }
         }
         catch (redisErr) {
             const e = redisErr;

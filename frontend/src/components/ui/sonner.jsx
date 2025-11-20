@@ -1,19 +1,10 @@
-"use client";
+import { Toaster as SonnerToaster } from 'sonner'
 
-import { Toaster as Sonner } from "sonner";
+export function AppToaster(props) {
+  return <SonnerToaster {...props} />
+}
 
-const Toaster = ({ ...props }) => {
-  return (
-    <Sonner
-      className="toaster group"
-      style={{
-        "--normal-bg": "var(--popover)",
-        "--normal-text": "var(--popover-foreground)",
-        "--normal-border": "var(--border)",
-      }}
-      {...props}
-    />
-  );
-};
+// Provide a named export `Toaster` so existing imports work: `import { Toaster } from './sonner'`
+export const Toaster = AppToaster
 
-export { Toaster };
+export default AppToaster
