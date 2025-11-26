@@ -17,6 +17,7 @@ services:
       - VNP_SECURE_SECRET
       - VNP_HOST
       - FRONTEND_URL
+      - GROQ_API_KEY
     depends_on:
       - redis
 

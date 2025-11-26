@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "mongodb": "^6.20.0",
-    "puppeteer": "^24.25.0"
-  }
-}
