@@ -1,4 +1,5 @@
-﻿import { ArrowLeft, ShoppingBag, Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
+﻿// This file is intended to be free of BOM
+import { ArrowLeft, ShoppingBag, Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';

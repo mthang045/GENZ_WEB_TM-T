@@ -34,8 +34,8 @@ export function ProductCarousel({ products, onProductClick }) {
                 ref={scrollContainerRef}
                 className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-2 py-4 snap-x snap-mandatory"
             >
-                {products.map((product) => (
-                    <div key={product.id} className="flex-shrink-0 w-[280px] sm:w-[300px] snap-start snap-always">
+                {products.map((product, idx) => (
+                    <div key={product.id || idx} className="flex-shrink-0 w-[280px] sm:w-[300px] snap-start snap-always">
                         <ProductCard product={product} onQuickView={onProductClick} />
                     </div>
                 ))}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db } from '../app.js';
+import { sendVerificationEmail } from '../utils/email.js';
 const router = Router();
 // POST /api/auth/register
 router.post('/auth/register', async (req, res) => {
@@ -68,4 +69,50 @@ router.post('/auth/login', async (req, res) => {
         res.status(500).json({ error: 'Login failed' });
     }
 });
+
+// POST /api/auth/forgot-password
+router.post('/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+        const usersCollection = db.collection('users');
+        const user = await usersCollection.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+                // Tạo mã xác nhận 6 số
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                // Lưu vào user
+                await usersCollection.updateOne({ email }, { $set: { resetCode: code, resetCodeCreated: new Date() } });
+                // Gửi mã xác nhận qua email
+                try {
+                    await sendVerificationEmail(email, code);
+                } catch (mailErr) {
+                    console.error('Send email error:', mailErr);
+                    return res.status(500).json({ error: 'Không gửi được email xác nhận. Vui lòng thử lại.' });
+                }
+                res.json({ message: 'Mã xác nhận đã được gửi về email.' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ error: 'Failed to process forgot password' });
+    }
+});
+
+// POST /api/auth/reset-password
+router.post('/auth/reset-password', async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+        if (!email || !code || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+        if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        const usersCollection = db.collection('users');
+        const user = await usersCollection.findOne({ email });
+        if (!user || user.resetCode !== code) return res.status(400).json({ error: 'Invalid code or email' });
+        // Đổi mật khẩu
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await usersCollection.updateOne({ email }, { $set: { password: hashed }, $unset: { resetCode: '', resetCodeCreated: '' } });
+        res.json({ message: 'Đổi mật khẩu thành công' });
+    } catch (err) {
+        console.error('Reset password error:', err);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
 export default router;

@@ -1,152 +1,104 @@
-﻿import { useState } from 'react'
-import { AuthProvider } from './contexts/AuthContext'
-import { ProductsProvider } from './contexts/ProductsContext'
-import { CartProvider } from './contexts/CartContext'
+﻿import React from 'react';
+// This file is the main application component
+import { BrowserRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProductsProvider, useProducts } from './contexts/ProductsContext';
+import { CartProvider } from './contexts/CartContext';
+import { Header } from './components/Header';
+import { Hero } from './components/Hero';
+import { Features } from './components/Features';
+import { FeaturedProducts } from './components/FeaturedProducts';
+import { AllProducts } from './components/AllProducts';
+import { ProductDetailPage } from './components/ProductDetailPage';
+import { CartPage } from './components/CartPage';
+import { Checkout } from './components/Checkout';
+import { Login } from './components/Login';
+import { Register } from './components/Register';
+import { UserProfile } from './components/UserProfile';
+import { Footer } from './components/Footer';
+import Chatbot from './components/Chatbot';
+import { Toaster } from './components/ui/sonner';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 
-import { Toaster } from './components/ui/sonner'
-import Chatbot from './components/Chatbot'
+// --- Components Phụ ---
 
-import { Header } from './components/Header'
-import { Hero } from './components/Hero'
-import { Features } from './components/Features'
-import { FeaturedProducts } from './components/FeaturedProducts'
-import { Footer } from './components/Footer'
-import { AllProducts } from './components/AllProducts'
-import { ProductDetailPage } from './components/ProductDetailPage'
-import { CartPage } from './components/CartPage'
-import { Checkout } from './components/Checkout'
-import { Login } from './components/Login'
-import { Register } from './components/Register'
-import { UserProfile } from './components/UserProfile'
+function ProductDetailWrapper() {
+  const { id } = useParams();
+  const { products } = useProducts();
+  const product = products ? products.find(p => String(p.id || p._id) === id) : null;
+  const navigate = useNavigate();
+  
+  if (!product) return null; 
+  
+  return <ProductDetailPage product={product} onBack={() => navigate('/products')} onProductClick={(p) => navigate(`/product/${p.id || p._id}`)} />;
+}
+
+// --- Component Chính: App ---
 
 function App() {
-  const [currentView, setCurrentView] = useState('home')
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleProductClick = (product) => {
-    setSelectedProduct(product)
-    setCurrentView('productDetail')
-  }
-
-  const handleSearch = (query) => {
-    setSearchQuery(query)
-    setCurrentView('allProducts')
-  }
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'home':
-        return (
-          <>
-            <Hero 
-              onExplore={() => setCurrentView('allProducts')} 
-              onViewCollection={() => setCurrentView('allProducts')}
-            />
-            <Features />
-            <FeaturedProducts 
-              onProductClick={handleProductClick}
-              onViewAll={() => setCurrentView('allProducts')}
-            />
-          </>
-        );
-      case 'allProducts':
-      case 'products':
-        return (
-          <AllProducts 
-            onProductClick={handleProductClick}
-            searchQuery={searchQuery}
-          />
-        );
-      case 'productDetail':
-        return (
-          <ProductDetailPage 
-            product={selectedProduct}
-            onBack={() => setCurrentView('allProducts')}
-            onProductClick={handleProductClick}
-          />
-        );
-      case 'cart':
-        return (
-          <CartPage 
-            onBack={() => setCurrentView('home')}
-            onCheckout={() => setCurrentView('checkout')}
-          />
-        );
-      case 'checkout':
-        return (
-          <Checkout 
-            onBack={() => setCurrentView('cart')}
-            onSuccess={() => setCurrentView('home')}
-          />
-        );
-      case 'login':
-        return (
-          <Login 
-            onBack={() => setCurrentView('home')}
-            onSwitchToRegister={() => setCurrentView('register')}
-            onLoginSuccess={() => setCurrentView('home')}
-          />
-        );
-      case 'register':
-        return (
-          <Register 
-            onBack={() => setCurrentView('home')}
-            onSwitchToLogin={() => setCurrentView('login')}
-            onRegisterSuccess={() => setCurrentView('home')}
-          />
-        );
-      case 'profile':
-        return (
-          <UserProfile onBack={() => setCurrentView('home')} />
-        );
-      case 'about':
-        return (
-          <div className="container mx-auto py-16 px-4 text-center">
-            <h2 className="text-3xl mb-4">Về chúng tôi</h2>
-            <p className="text-lg text-gray-600">GENZ là thương hiệu mũ bảo hiểm hàng đầu cho thế hệ trẻ. An toàn, phong cách và chất lượng.</p>
-          </div>
-        );
-      case 'contact':
-        return (
-          <div className="container mx-auto py-16 px-4 text-center">
-            <h2 className="text-3xl mb-4">Liên hệ</h2>
-            <p className="text-lg text-gray-600">Mọi thắc mắc vui lòng liên hệ: contact@genz.vn hoặc số điện thoại 0123 456 789.</p>
-          </div>
-        );
-      default:
-        return null;
-    }
-  }
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   return (
     <AuthProvider>
       <ProductsProvider>
         <CartProvider>
-          <div className="min-h-screen bg-white">
-            <Header 
-              onCartClick={() => setCurrentView('cart')}
-              onLoginClick={() => setCurrentView('login')}
-              onProfileClick={() => setCurrentView('profile')}
-              onAdminClick={() => setCurrentView('admin')}
-              onHomeClick={() => setCurrentView('home')}
-              onSearch={handleSearch}
-              onNavigate={setCurrentView}
+          <div className="min-h-screen flex flex-col bg-gray-50">
+            <Header
+              onCartClick={() => navigate('/cart')}
+              onSearch={(q) => { setSearchQuery(q); navigate('/products'); }}
+              onLoginClick={() => navigate('/login')}
+              onProfileClick={() => navigate('/profile')}
+              onAdminClick={() => window.location.href = '/admin'}
+              onNavigate={(section) => {
+                if (section === 'home') navigate('/');
+                else if (section === 'products') navigate('/products');
+                else if (section === 'about') window.scrollTo({ top: 1000, behavior: 'smooth' });
+                else if (section === 'contact') window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+              }}
             />
-            
-            <main>
-              {renderContent()}
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={
+                  <>
+                    <Hero onExplore={() => navigate('/products')} onViewCollection={() => navigate('/products')} />
+                    <Features />
+                    <FeaturedProducts onProductClick={(p) => navigate(`/product/${p.id || p._id}`)} onViewAll={() => navigate('/products')} />
+                  </>
+                } />
+                <Route path="/products" element={<AllProducts onProductClick={(p) => navigate(`/product/${p.id || p._id}`)} searchQuery={searchQuery} />} />
+                <Route path="/product/:id" element={<ProductDetailWrapper />} />
+                <Route path="/cart" element={<CartPage onBack={() => navigate('/')} onCheckout={() => navigate('/checkout')} />} />
+                <Route path="/checkout" element={<Checkout onBack={() => navigate('/cart')} onSuccess={() => navigate('/')} />} />
+                <Route path="/login" element={<Login onBack={() => navigate('/')} onLoginSuccess={() => navigate('/')} />} />
+                <Route path="/register" element={<Register onBack={() => navigate('/login')} />} />
+                <Route path="/profile" element={<UserProfile onBack={() => navigate('/')} />} />
+                <Route path="/admin" element={<AdminDashboard onLogout={() => navigate('/login')} />} />
+                <Route path="/forgot-password" element={React.createElement(require('./components/ForgotPassword.jsx').default)} />
+              </Routes>
             </main>
-            
-            <Footer />
+            {!isAdminPage && <Footer />}
             <Chatbot />
             <Toaster />
           </div>
         </CartProvider>
       </ProductsProvider>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+// --- Component Router (Bọc ngoài cùng) ---
 
+function AppWithRouter() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+}
+
+export default AppWithRouter;

@@ -4,75 +4,77 @@ import { db } from '../app.js';
 import { requireAdmin, authMiddleware } from '../middleware/auth.js';
 const router = Router();
 router.use(authMiddleware);
+
+// Helper: Lấy user từ token
+async function getUserFromToken(userIdFromToken) {
+    if (!userIdFromToken) return null;
+    const usersCollection = db.collection('users');
+    return usersCollection.findOne({ _id: new ObjectId(userIdFromToken) });
+}
+
+// Helper: Lấy orders theo quyền
+async function getOrdersByUser(user) {
+    const ordersCollection = db.collection('orders');
+    if (user.role === 'admin') {
+        return ordersCollection.find({}).sort({ createdAt: -1 }).toArray();
+    } else {
+        return ordersCollection.find({ "customerInfo.userId": user.userId }).sort({ createdAt: -1 }).toArray();
+    }
+}
+
 router.get('/orders', async (req, res) => {
     try {
-        const ordersCollection = db.collection('orders');
-        // Get _id from auth token
         const userIdFromToken = req.userId;
         if (!userIdFromToken) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
-        // Query user collection to get userId field (int) and role
-        const usersCollection = db.collection('users');
-        const user = await usersCollection.findOne({ _id: new ObjectId(userIdFromToken) });
+        const user = await getUserFromToken(userIdFromToken);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // If admin, return all orders. If regular user, filter by userId
-        let orders;
-        if (user.role === 'admin') {
-            // Admin sees all orders
-            orders = await ordersCollection.find({}).sort({ createdAt: -1 }).toArray();
-        }
-        else {
-            // Regular user sees only their orders
-            const userId = user.userId; // This is the numeric userId (int)
-            orders = await ordersCollection.find({ "customerInfo.userId": userId }).sort({ createdAt: -1 }).toArray();
-        }
+        const orders = await getOrdersByUser(user);
         res.json({ data: orders });
-    }
-    catch (err) {
+    } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });
 // POST /api/orders (create order - for regular users)
+// Helper: Tạo order mới
+function buildOrderData(data, userId) {
+    const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-6)}`;
+    return {
+        orderId,
+        items: data.items || [],
+        customerInfo: { ...data.customerInfo, userId },
+        totalAmount: data.totalAmount || 0,
+        shippingCost: data.shippingCost || 0,
+        paymentMethod: data.paymentMethod || 'cod',
+        paymentStatus: data.paymentStatus || 'pending',
+        status: 'pending',
+        notes: data.notes || '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    };
+}
+
 router.post('/orders', async (req, res) => {
     try {
         const data = req.body;
-        const ordersCollection = db.collection('orders');
-        // Get _id from JWT token
         const userIdFromToken = req.userId;
         if (!userIdFromToken) {
             return res.status(401).json({ error: 'Unauthorized - no userId in token' });
         }
-        // Query user collection to get userId field (int)
-        const usersCollection = db.collection('users');
-        const user = await usersCollection.findOne({ _id: new ObjectId(userIdFromToken) });
+        const user = await getUserFromToken(userIdFromToken);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const userId = user.userId; // This is the numeric userId (int)
-        // Generate orderId: ORD-YYYYMMDD-XXXXXX
-        const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-6)}`;
-        // Create order with ALL required fields per MongoDB schema
-        const orderData = {
-            orderId,
-            items: data.items || [],
-            customerInfo: Object.assign({ userId }, data.customerInfo),
-            totalAmount: data.totalAmount || 0,
-            shippingCost: data.shippingCost || 0,
-            paymentMethod: data.paymentMethod || 'cod',
-            paymentStatus: data.paymentStatus || 'pending',
-            status: 'pending',
-            notes: data.notes || '',
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
+        const userId = user.userId;
+        const orderData = buildOrderData(data, userId);
+        const ordersCollection = db.collection('orders');
         const result = await ordersCollection.insertOne(orderData);
-        res.status(201).json({ data: Object.assign({ _id: result.insertedId }, orderData) });
-    }
-    catch (err) {
+        res.status(201).json({ data: { _id: result.insertedId, ...orderData } });
+    } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to create order' });
     }

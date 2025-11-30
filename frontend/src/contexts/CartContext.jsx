@@ -1,5 +1,5 @@
 ﻿import { toast } from 'sonner'
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { carts as cartsAPI } from '../lib/api'
 import { useAuth } from './AuthContext'
 
@@ -12,6 +12,29 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
+
+
+
+
+
+  const loadCart = useCallback(async () => {
+    try {
+      if (!user) {
+        setCart([])
+        return
+      }
+      setLoading(true)
+      const res = await cartsAPI.get()
+      const cartData = res.items || res.data?.items || []
+      setCart(cartData)
+    } catch (err) {
+      toast.error('Lỗi tải giỏ hàng')
+      setCart([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
   // Load cart when user changes (login/logout)
   useEffect(() => {
     if (user) {
@@ -19,33 +42,15 @@ export function CartProvider({ children }) {
     } else {
       setCart([])
     }
-  }, [user?.id])
-
-  const loadCart = async () => {
-    try {
-      if (!user) {
-        setCart([])
-        return
-      }
-
-      setLoading(true)
-      const res = await cartsAPI.get()
-      const cartData = res.items || res.data?.items || []
-      setCart(cartData)
-    } catch (err) {
-      toast.error('L?i t?i gi? h�ng')
-      setCart([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [user, loadCart])
 
   const addToCart = async (product, color, size, quantity) => {
     try {
       if (!user) {
-        toast.error('Vui l�ng dang nh?p!')
+        toast.error('Vui lòng đăng nhập!')
         return
       }
+
 
       await cartsAPI.addItem({
         productId: product.id,
@@ -58,9 +63,9 @@ export function CartProvider({ children }) {
       })
 
       await loadCart()
-      toast.success('�� th�m s?n ph?m v�o gi? h�ng!')
+      toast.success('Đã thêm sản phẩm vào giỏ hàng!')
     } catch (err) {
-      toast.error(err.message || 'Kh�ng th? th�m s?n ph?m')
+      toast.error(err.message || 'Không thể thêm sản phẩm')
       console.error('[CartContext] Add to cart error:', err)
     }
   }
@@ -68,22 +73,22 @@ export function CartProvider({ children }) {
   const removeFromCart = async (productId) => {
     try {
       if (!user) {
-        toast.error('Vui l�ng dang nh?p!')
+        toast.error('Vui lòng đăng nhập!')
         return
       }
 
       await cartsAPI.removeItem(productId)
       await loadCart()
-      toast.success('�� x�a s?n ph?m kh?i gi? h�ng!')
+      toast.success('Đã xóa sản phẩm khỏi giỏ hàng!')
     } catch (err) {
-      toast.error(err.message || 'Kh�ng th? x�a s?n ph?m')
+      toast.error(err.message || 'Không thể xóa sản phẩm')
     }
   }
 
   const updateQuantity = async (productId, quantity) => {
     try {
       if (!user) {
-        toast.error('Vui l�ng dang nh?p!')
+        toast.error('Vui lòng đăng nhập!')
         return
       }
 
@@ -95,7 +100,7 @@ export function CartProvider({ children }) {
       await cartsAPI.updateItem(productId, { quantity })
       await loadCart()
     } catch (err) {
-      toast.error(err.message || 'Kh�ng th? c?p nh?t s? lu?ng')
+      toast.error(err.message || 'Không thể cập nhật số lượng')
       console.error('[CartContext] Update quantity error:', err)
     }
   }
@@ -103,15 +108,15 @@ export function CartProvider({ children }) {
   const clearCart = async () => {
     try {
       if (!user) {
-        toast.error('Vui l�ng dang nh?p!')
+        toast.error('Vui lòng đăng nhập!')
         return
       }
 
       await cartsAPI.clear()
       await loadCart()
-      toast.success('�� x�a to�n b? gi? h�ng!')
+      toast.success('Đã xóa toàn bộ giỏ hàng!')
     } catch (err) {
-      toast.error(err.message || 'Kh�ng th? x�a gi? h�ng')
+      toast.error(err.message || 'Không thể xóa giỏ hàng')
       console.error('[CartContext] Clear cart error:', err)
     }
   }

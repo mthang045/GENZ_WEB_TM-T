@@ -167,11 +167,11 @@ export function ProductDetailPage({ product, onBack, onProductClick }) {
                                 <h3 className="mb-2">Mô tả sản phẩm:</h3>
                                 <p className="text-gray-600 leading-relaxed">{product.description}</p>
                             </div>
-                            {product.features && product.features.length > 0 && (
+                            {(product.features && product.features.length > 0) && (
                                 <div>
                                     <h3 className="mb-3">Tính năng nổi bật:</h3>
                                     <ul className="space-y-2">
-                                        {product.features.map((feature, index) => (
+                                        {(product.features || []).map((feature, index) => (
                                             <li key={index} className="flex items-start gap-2">
                                                 <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                                                 <span className="text-gray-700">{feature}</span>
@@ -184,7 +184,7 @@ export function ProductDetailPage({ product, onBack, onProductClick }) {
                             <div>
                                 <h4 className="mb-3">Màu sắc:</h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {product.colors.map((color) => (
+                                    {(product.colors || []).map((color) => (
                                         <Button
                                             key={color}
                                             variant={selectedColor === color ? 'default' : 'outline'}
@@ -207,7 +207,7 @@ export function ProductDetailPage({ product, onBack, onProductClick }) {
                             <div>
                                 <h4 className="mb-3">Kích cỡ:</h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {product.sizes.map((size) => (
+                                    {(product.sizes || []).map((size) => (
                                         <Button
                                             key={size}
                                             variant={selectedSize === size ? 'default' : 'outline'}
@@ -299,7 +299,7 @@ export function ProductDetailPage({ product, onBack, onProductClick }) {
                 </div>
 
                 {/* Related Products Section */}
-                {relatedProducts.length > 0 && (
+                {(relatedProducts && relatedProducts.length > 0) && (
                     <div className="mt-16">
                         <div className="mb-8">
                             <h2 className="text-2xl mb-2">Sản Phẩm Liên Quan</h2>
@@ -308,7 +308,7 @@ export function ProductDetailPage({ product, onBack, onProductClick }) {
                             </p>
                         </div>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {relatedProducts.map((relatedProduct) => (
+                            {(relatedProducts || []).map((relatedProduct) => (
                                 <ProductCard
                                     key={relatedProduct.id}
                                     product={relatedProduct}

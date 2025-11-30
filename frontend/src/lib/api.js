@@ -1,4 +1,21 @@
-﻿const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
+﻿// @type RequestInit & { query?: Record };
+
+
+// @type RequestInit & { query?: Record };
+
+
+// @type RequestInit & { query?: Record };
+// Hỗ trợ cả runtime env (window._env_) khi build production static
+let API_BASE = import.meta.env?.VITE_API_URL;
+if (!API_BASE && typeof window !== 'undefined' && window._env_ && window._env_.VITE_API_URL) {
+  API_BASE = window._env_.VITE_API_URL;
+}
+if (!API_BASE && process.env.REACT_APP_API_URL) {
+  API_BASE = process.env.REACT_APP_API_URL;
+}
+if (!API_BASE) {
+  API_BASE = 'http://localhost:4000/api';
+}
 
 // @type RequestInit & { query?: Record };
 

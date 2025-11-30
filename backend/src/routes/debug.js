@@ -1,8 +1,32 @@
+
 import { Router } from 'express';
 import { db } from '../app.js';
+import { ObjectId } from 'mongodb';
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const router = Router();
+
+// DEBUG: Echo route for troubleshooting header/body issues (no auth)
+router.all('/debug/echo', (req, res) => {
+    console.log('DEBUG ECHO ROUTE HIT', {
+        method: req.method,
+        headers: req.headers,
+        body: req.body,
+        query: req.query
+    });
+    res.json({
+        echo: true,
+        method: req.method,
+        headers: req.headers,
+        body: req.body,
+        query: req.query,
+        env_DEBUG_KEY: process.env.DEBUG_KEY,
+        message: 'If you see this, /debug/echo route handler ran.'
+    });
+});
 // POST /api/debug/promote { email }
 router.post('/debug/promote', async (req, res) => {
     var _a;
@@ -27,13 +51,30 @@ router.post('/debug/promote', async (req, res) => {
 });
 // POST /api/debug/reset-products - Reload products from genz.products.json
 router.post('/debug/reset-products', async (req, res) => {
+        try {
+            console.log('--- DEBUG /debug/reset-products ---');
+            console.log('Headers:', req.headers);
+            console.log('Body:', req.body);
+            console.log('process.env.DEBUG_KEY:', process.env.DEBUG_KEY);
+        } catch (err) {
+            console.log('LOG ERROR:', err);
+        }
     const key = req.headers['x-debug-key'] || req.body.debugKey;
-    if (!key || key !== process.env.DEBUG_KEY)
-        return res.status(403).json({ error: 'Forbidden' });
+    if (!key || key !== process.env.DEBUG_KEY) {
+        console.log('Key mismatch:', key, process.env.DEBUG_KEY);
+        return res.status(403).json({ error: 'Forbidden', key, env: process.env.DEBUG_KEY });
+    }
     try {
         const productsFilePath = path.join(__dirname, '../../data/genz.products.json');
         const jsonData = fs.readFileSync(productsFilePath, 'utf-8');
-        const products = JSON.parse(jsonData);
+        let products = JSON.parse(jsonData);
+        // Chuyển đổi _id: { $oid: ... } thành _id: new ObjectId(...)
+        products = products.map((p) => {
+            if (p._id && p._id.$oid) {
+                p._id = new ObjectId(p._id.$oid);
+            }
+            return p;
+        });
         const productsCollection = db.collection('products');
         // Clear existing products
         await productsCollection.deleteMany({});

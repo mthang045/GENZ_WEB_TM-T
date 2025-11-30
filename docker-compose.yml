@@ -5,8 +5,9 @@ services:
       context: ./backend
     ports:
       - '4000:4000'
+    env_file:
+      - ./backend/.env
     environment:
-      - MONGO_URI
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - PORT=4000
@@ -21,12 +22,33 @@ services:
     depends_on:
       - redis
 
+
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     volumes:
       - redis-data:/data
 
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
 volumes:
   redis-data:
+  mongo-data:
   

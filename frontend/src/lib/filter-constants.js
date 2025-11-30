@@ -1,4 +1,6 @@
-﻿export const categories = [
+﻿// This file contains filter constants
+// This file contains filter constants
+export const categories = [
   'Tất cả', 
   'Fullface', 
   '3/4', 
@@ -8,7 +10,7 @@
 export const brands = [
   'Tất cả',
   'GENZ'
-  ]
+]
 export const priceRanges = [
   { label: 'Tất cả', min: 0, max: Infinity },
   { label: 'Dưới 1 triệu', min: 0, max: 1000000 },

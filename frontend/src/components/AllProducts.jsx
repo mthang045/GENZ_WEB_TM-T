@@ -12,73 +12,77 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 const PRODUCTS_PER_ROW = 4;
 export function AllProducts({ onProductClick, searchQuery = '' }) {
     const { products } = useProducts();
-    const { loading } = useProducts();
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
     const [selectedPriceRange, setSelectedPriceRange] = useState(0);
     const [sortBy, setSortBy] = useState('default');
     const [viewMode, setViewMode] = useState('carousel');
     const [displayRows, setDisplayRows] = useState(1);
-    const filteredProducts = useMemo(() => {
-        // products may come from backend with _id and different fields; normalize
-        const normalize = (p) => {
-            var _a, _b;
-            // Calculate inStock based on stock array
-            let inStock = true;
-            if (Array.isArray(p.stock)) {
-                inStock = p.stock.some((s) => s.quantity > 0);
-            }
-            else if (typeof p.stock === 'number') {
-                inStock = p.stock > 0;
-            }
-            else if (p.inStock !== undefined) {
-                inStock = p.inStock;
-            }
-            return {
-                id: p.id || p._id || String(p._id || Math.random()),
-                name: p.name || p.title || 'No name',
-                price: (_a = p.price) !== null && _a !== void 0 ? _a : 0,
-                image: (p.images && p.images[0]) || p.image || '',
-                category: p.category || 'Khác',
-                brand: p.brand || 'GenZ',
-                rating: (_b = p.rating) !== null && _b !== void 0 ? _b : 0,
-                description: p.description || '',
-                features: p.features || [],
-                colors: p.colors || [],
-                sizes: p.sizes || [],
-                inStock,
-                inventory: p.inventory || [],
-                colorImages: p.colorImages || {},
-            };
-        };
-        let filtered = products.map(normalize);
-        // Filter by search query
-        if (searchQuery) {
-            filtered = filtered.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                product.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    // Helper: Chuẩn hóa sản phẩm
+    const normalizeProduct = (p) => {
+        let inStock = true;
+        if (Array.isArray(p.stock)) {
+            inStock = p.stock.some((s) => s.quantity > 0);
+        } else if (typeof p.stock === 'number') {
+            inStock = p.stock > 0;
+        } else if (p.inStock !== undefined) {
+            inStock = p.inStock;
         }
-        // Filter by stock availability (only show in-stock products, default to true if inStock is undefined)
+        return {
+            id: p.id || p._id || String(p._id || Math.random()),
+            name: p.name || p.title || 'No name',
+            price: p.price ?? 0,
+            image: (p.images && p.images[0]) || p.image || '',
+            category: p.category || 'Khác',
+            brand: p.brand || 'GenZ',
+            rating: p.rating ?? 0,
+            description: p.description || '',
+            features: p.features || [],
+            colors: p.colors || [],
+            sizes: p.sizes || [],
+            inStock,
+            inventory: p.inventory || [],
+            colorImages: p.colorImages || {},
+        };
+    };
+
+    // Helper: Lọc sản phẩm
+    const filterProducts = (list) => {
+        let filtered = list;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            filtered = filtered.filter((product) =>
+                product.name.toLowerCase().includes(q) ||
+                product.description.toLowerCase().includes(q) ||
+                product.category.toLowerCase().includes(q)
+            );
+        }
         filtered = filtered.filter(product => product.inStock !== false);
-        // Filter by category
         if (selectedCategory !== 'Tất cả') {
             filtered = filtered.filter((product) => product.category === selectedCategory);
         }
-        // Filter by price range
         const range = priceRanges[selectedPriceRange];
         filtered = filtered.filter((product) => product.price >= range.min && product.price <= range.max);
-        // Sort
+        return filtered;
+    };
+
+    // Helper: Sắp xếp sản phẩm
+    const sortProducts = (list) => {
         switch (sortBy) {
             case 'price-asc':
-                filtered.sort((a, b) => a.price - b.price);
-                break;
+                return [...list].sort((a, b) => a.price - b.price);
             case 'price-desc':
-                filtered.sort((a, b) => b.price - a.price);
-                break;
+                return [...list].sort((a, b) => b.price - a.price);
             case 'rating':
-                filtered.sort((a, b) => b.rating - a.rating);
-                break;
+                return [...list].sort((a, b) => b.rating - a.rating);
+            default:
+                return list;
         }
-        return filtered;
+    };
+
+    const filteredProducts = useMemo(() => {
+        const normalized = products.map(normalizeProduct);
+        const filtered = filterProducts(normalized);
+        return sortProducts(filtered);
     }, [products, searchQuery, selectedCategory, selectedPriceRange, sortBy]);
     // Reset display count when filters change
     useEffect(() => {

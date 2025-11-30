@@ -1,4 +1,5 @@
-﻿import { createContext, useContext, useState, useEffect } from 'react'
+﻿// Removed BOM
+import { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { auth as apiAuth, orders as apiOrders } from '../lib/api'
 
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
     const savedToken = localStorage.getItem('genz_token')
     const savedUser = localStorage.getItem('genz_user')
     
+    // Removed BOM
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser))
@@ -69,13 +71,13 @@ export function AuthProvider({ children }) {
         localStorage.setItem('genz_user', JSON.stringify(res.user))
         setUser(res.user)
         await loadOrdersFromAPI()
-        toast.success('�ang nh?p th�nh c�ng!')
+        toast.success('Đăng nhập thành công!')
         return true
       }
-      toast.error('�ang nh?p th?t b?i')
+      toast.error('Đăng nhập thất bại')
       return false
     } catch (err) {
-      toast.error(err?.message || 'L?i khi dang nh?p')
+      toast.error(err?.message || 'Lỗi khi đăng nhập')
       return false
     }
   }
@@ -88,13 +90,13 @@ export function AuthProvider({ children }) {
         localStorage.setItem('genz_user', JSON.stringify(res.user))
         setUser(res.user)
         await loadOrdersFromAPI()
-        toast.success('�ang k� th�nh c�ng!')
+        toast.success('Đăng ký thành công!')
         return true
       }
-      toast.error('�ang k� th?t b?i')
+      toast.error('Đăng ký thất bại')
       return false
     } catch (err) {
-      toast.error(err?.message || 'L?i khi dang k�')
+      toast.error(err?.message || 'Lỗi khi đăng ký')
       return false
     }
   }
@@ -103,7 +105,7 @@ export function AuthProvider({ children }) {
     setUser(null)
     localStorage.removeItem('genz_user')
     localStorage.removeItem('genz_token')
-    toast.success('�ang xu?t th�nh c�ng!')
+    toast.success('Đăng xuất thành công!')
   }
 
   const isAdmin = () => {
@@ -124,7 +126,7 @@ export function AuthProvider({ children }) {
       
       const newOrder = res.data || res
       setOrders(prev => [...prev, newOrder])
-      toast.success('�?t h�ng th�nh c�ng!')
+      toast.success('Đặt hàng thành công!')
       
       // Reload orders from API to stay in sync
       try {
@@ -135,7 +137,7 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error('Failed to create order:', err)
-      toast.error('L?i khi d?t h�ng: ' + (err?.message || String(err)))
+      toast.error('Lỗi khi đặt hàng: ' + (err?.message || String(err)))
       throw err
     }
   }
@@ -145,7 +147,7 @@ export function AuthProvider({ children }) {
       order._id === orderId ? { ...order, status } : order
     )
     setOrders(updatedOrders)
-    toast.success('C?p nh?t tr?ng th�i don h�ng th�nh c�ng!')
+    toast.success('Cập nhật trạng thái đơn hàng thành công!')
   }
 
   const getUserOrders = () => {

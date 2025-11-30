@@ -42,11 +42,11 @@ export function UserProfile({ onBack }) {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return 'Ch? x�c nh?n'
-      case 'confirmed': return '�� x�c nh?n'
-      case 'shipping': return '�ang giao'
-      case 'delivered': return '�� giao'
-      case 'cancelled': return '�� h?y'
+      case 'pending': return 'Chờ xác nhận'
+      case 'confirmed': return 'Đã xác nhận'
+      case 'shipping': return 'Đang giao'
+      case 'delivered': return 'Đã giao'
+      case 'cancelled': return 'Đã huỷ'
       default: return status
     }
   }
@@ -60,7 +60,7 @@ export function UserProfile({ onBack }) {
           className="mb-6 hover:text-pink-500"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Quay L?i
+          Quay Lại
         </Button>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -70,7 +70,7 @@ export function UserProfile({ onBack }) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
-                  Th�ng Tin T�i Kho?n
+                  Thông Tin Tài Khoản
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -78,7 +78,7 @@ export function UserProfile({ onBack }) {
                   <div className="flex items-center gap-3 text-sm">
                     <User className="w-4 h-4 text-gray-500" />
                     <div>
-                      <p className="text-gray-500">H? t�n</p>
+                      <p className="text-gray-500">Họ tên</p>
                       <p>{user.name}</p>
                     </div>
                   </div>
@@ -94,7 +94,7 @@ export function UserProfile({ onBack }) {
                   <div className="flex items-center gap-3 text-sm">
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <div>
-                      <p className="text-gray-500">Ng�y tham gia</p>
+                      <p className="text-gray-500">Ngày tham gia</p>
                       <p>{formatDate(user.createdAt)}</p>
                     </div>
                   </div>
@@ -104,11 +104,11 @@ export function UserProfile({ onBack }) {
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">T?ng don h�ng</span>
+                    <span className="text-gray-600">Tổng đơn hàng</span>
                     <span>{userOrders.length}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">�� ho�n th�nh</span>
+                    <span className="text-gray-600">Đã hoàn thành</span>
                     <span className="text-green-600">
                       {userOrders.filter(o => o.status === 'delivered').length}
                     </span>
@@ -123,7 +123,7 @@ export function UserProfile({ onBack }) {
                     onBack()
                   }}
                 >
-                  �ang Xu?t
+                  Đăng Xuất
                 </Button>
               </CardContent>
             </Card>
@@ -135,16 +135,16 @@ export function UserProfile({ onBack }) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="w-5 h-5" />
-                  �on H�ng C?a T�i ({userOrders.length})
+                  Đơn Hàng Của Tôi ({userOrders.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {userOrders.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">B?n chua c� don h�ng n�o</p>
+                    <p className="text-gray-500">Bạn chưa có đơn hàng nào</p>
                     <Button onClick={onBack} className="mt-4 bg-pink-500 hover:bg-pink-600">
-                      Mua S?m Ngay
+                      Mua Sắm Ngay
                     </Button>
                   </div>
                 ) : (
@@ -155,7 +155,7 @@ export function UserProfile({ onBack }) {
                         <div key={order._id} className="border rounded-lg p-4 space-y-3">
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="text-sm text-gray-500">M� don h�ng</p>
+                              <p className="text-sm text-gray-500">Mã đơn hàng</p>
                               <p>{order.orderId}</p>
                             </div>
                             <Badge className={getStatusColor(order.status)}>
@@ -181,7 +181,7 @@ export function UserProfile({ onBack }) {
                           <div className="flex justify-between items-center">
                             <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
                             <div className="text-right">
-                              <p className="text-sm text-gray-500">T?ng c?ng</p>
+                              <p className="text-sm text-gray-500">Tổng cộng</p>
                               <p className="text-pink-500">{formatPrice(order.totalAmount)}</p>
                             </div>
                           </div>

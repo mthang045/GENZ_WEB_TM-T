@@ -1,143 +1,166 @@
+import 'dotenv/config'; // QUAN TRỌNG: Luôn để dòng này đầu tiên
 import express from 'express';
 import cors from 'cors';
-import Groq from 'groq-sdk';
-import dotenv from 'dotenv';
-import { db } from '../app.js';
-
-dotenv.config();
+import { MongoClient } from 'mongodb';
+import axios from 'axios';
 
 const router = express.Router();
 
-if (!process.env.GROQ_API_KEY) console.error("❌ LỖI: Chưa thấy GROQ_API_KEY");
+// --- 1. CẤU HÌNH ---
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const DB_NAME = 'genz';
+const client = new MongoClient(MONGO_URI);
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-// 1. DỮ LIỆU SẢN PHẨM CHI TIẾT (KIẾN THỨC CHO AI)
-// Bạn có thể viết càng chi tiết càng tốt, AI sẽ tự lọc ý để trả lời
-const PRODUCT_KNOWLEDGE = `
-CHI TIẾT SẢN PHẨM CỦA SHOP:
-
-1. Mũ Fullface Royal M139 (Best Seller)
-   - Giá bán: 850.000đ.
-   - Phong cách: Cổ điển (Classic/Vintage), form tròn, kính âm độc đáo.
-   - Kính: Kính âm toàn phần (kéo lên là giấu vào trong mũ), màu khói trà đi được cả ngày và đêm.
-   - Chất liệu: Nhựa ABS nguyên sinh (chống va đập cao).
-   - Trọng lượng: Khoảng 1050g (Khá nhẹ so với fullface thường).
-   - Lót mũ: Vải nâu đất vintage, tháo rời giặt được, kháng khuẩn.
-   - Màu sắc: Đen nhám, Đen bóng, Trắng, Xám xi măng, Vàng nghệ.
-   - Phù hợp: Đi phố, đi cafe, đi tour ngắn. Nam nữ đều đội đẹp.
-
-2. Mũ Fullface AGV K1 (Cao cấp)
-   - Giá bán: 2.500.000đ.
-   - Phong cách: Thể thao, Racing, đuôi gió dài (spoiler) tăng khí động học.
-   - Chất liệu: Nhựa High Resistance Thermoplastic.
-   - Kính: Góc nhìn rộng 190 độ, chống trầy xước.
-   - Hệ thống gió: 5 hốc gió trước, 2 hốc thoát sau (cực mát).
-   - Khóa: Double D-Ring (chuẩn đua xe an toàn nhất).
-
-3. Mũ 3/4 Asia MT-115
-   - Giá bán: 420.000đ.
-   - Đặc điểm: Kính dài che hết mặt, form nhỏ gọn.
-   - Tiện ích: Kính chống tia UV, bền bỉ.
-`;
-
-// 2. SYSTEM PROMPT (NÂNG CẤP)
-const SHOP_CONTEXT = `
-Bạn là trợ lý ảo của "GENZ - Shop mũ bảo hiểm".
-Ngôn ngữ: Tiếng Việt. Phong cách: Thân thiện, dùng icon 🏍️.
-
-DỮ LIỆU SẢN PHẨM:
-${PRODUCT_KNOWLEDGE}
-
-QUY TẮC TRẢ LỜI QUAN TRỌNG:
-1. Nếu khách hỏi chung chung (VD: "Tư vấn mũ M139"): Chỉ trả lời tóm tắt gồm: Tên, Giá, và 1 điểm nổi bật nhất. Sau đó hỏi khách có muốn xem chi tiết không.
-2. Nếu khách hỏi sâu (VD: "Chi tiết hơn đi", "Nặng không", "Chất liệu gì", "Có màu gì"): Hãy tìm trong DỮ LIỆU SẢN PHẨM để trả lời chính xác câu hỏi đó.
-3. Không bịa đặt thông tin không có trong dữ liệu.
-`;
-
-// ... (Giữ nguyên hàm checkWarrantyStatus và formatHistoryForGroq như cũ) ...
-// Để code gọn, tôi giả định bạn giữ lại đoạn code tra cứu bảo hành ở câu trả lời trước tại đây
-// Nếu bạn muốn tôi paste lại toàn bộ 100% file thì bảo tôi nhé.
-
-async function checkWarrantyStatus(phoneNumber) {
-  try {
-    if (!db) return null;
-    const orders = await db.collection('orders').find({
-      $or: [{ phone: phoneNumber }, { 'shippingAddress.phone': phoneNumber }]
-    }).sort({ createdAt: -1 }).limit(1).toArray();
-    
-    if (!orders || orders.length === 0) return null;
-
-    const order = orders[0];
-    const purchaseDate = new Date(order.createdAt || order.date);
-    const expireDate = new Date(purchaseDate);
-    expireDate.setMonth(expireDate.getMonth() + 12);
-    const isActive = new Date() < expireDate;
-    
-    return `SĐT ${phoneNumber} mua đơn hàng ${order._id} ngày ${purchaseDate.toLocaleDateString('vi-VN')}. Trạng thái: ${isActive ? "✅ Còn bảo hành" : "❌ Hết bảo hành"}.`;
-  } catch (e) { return null; }
+// Kết nối DB (Chỉ kết nối 1 lần)
+async function connectDB() {
+  if (!client.topology || !client.topology.isConnected()) {
+    await client.connect();
+    console.log('[MongoDB] Đã kết nối thành công!');
+  }
+  return client.db(DB_NAME);
 }
 
-// ...
+// --- 2. XỬ LÝ RULE-BASED (Chạy trước, ưu tiên tốc độ) ---
+function getRuleBasedResponse(message) {
+    const msg = message.toLowerCase().trim();
+    console.log('[Rule Check]:', msg);
 
-function formatHistoryForGroq(history) {
-    if (!Array.isArray(history)) return [];
-    return history.map(msg => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user', 
-      content: msg.content
-    }));
-  }
-  
-  function generateQuickReplies(text) {
-    const lowerText = text.toLowerCase();
-    const replies = [];
-    // Logic gợi ý nút bấm thông minh dựa trên câu trả lời AI
-    if (lowerText.includes('m139')) replies.push('Màu sắc M139?', 'Kính M139 thế nào?');
-    if (lowerText.includes('giá')) replies.push('Tư vấn theo giá');
-    if (replies.length === 0) replies.push('Tư vấn mua hàng', 'Tra cứu bảo hành');
-    return replies.slice(0, 4);
-  }
-
-router.options('/chat', cors());
-
-router.post('/chat', async (req, res) => {
-  try {
-    const { message, conversationHistory = [] } = req.body;
-    let systemContextWithData = SHOP_CONTEXT;
-
-    // Check SĐT để tra bảo hành (Giữ nguyên logic cũ)
-    const phoneRegex = /(0[3|5|7|8|9][0-9]{8})\b/g;
-    const foundPhones = message.match(phoneRegex);
-    if (foundPhones) {
-       const info = await checkWarrantyStatus(foundPhones[0]);
-       if (info) systemContextWithData += `\n\nTHÔNG TIN BẢO HÀNH KHÁCH HÀNG: ${info}`;
-       else systemContextWithData += `\n\nLƯU Ý: Không tìm thấy đơn hàng cho SĐT ${foundPhones[0]}.`;
+    // [MỚI] Bắt dính ngay câu hỏi mua hàng chung chung
+    if (msg.match(/tư vấn|mua hàng|mua nón|mua mũ|cần mua/i)) {
+        return {
+            reply: 'Bạn đang tìm loại mũ nào ạ?\n\n🏍️ Fullface (Đi phượt, an toàn nhất)\n🎨 3/4 (Thời trang, đi phố)\n⚡ Nửa đầu (Gọn nhẹ, thoáng mát)',
+            quickReplies: ['Mũ Fullface', 'Mũ 3/4', 'Mũ nửa đầu']
+        };
     }
 
-    const messages = [
-      { role: "system", content: systemContextWithData }, 
-      ...formatHistoryForGroq(conversationHistory),
-      { role: "user", content: message }
+    // 2.1. Check sản phẩm cụ thể (Keyword cứng)
+    const products = [
+      { key: 'm139', name: 'Royal M139', price: '850.000đ' },
+      { key: 'yohe 967', name: 'Yohe 967', price: '650.000đ' },
+      { key: 'mt-105', name: 'Asia MT-105', price: '280.000đ' },
+      { key: 'a102k', name: 'GRS A102K', price: '320.000đ' },
+      { key: 'agv k1', name: 'AGV K1', price: '2.500.000đ' }
     ];
 
-    const completion = await groq.chat.completions.create({
-      messages: messages,
-      model: "llama-3.3-70b-versatile", // Model này rất giỏi đọc hiểu context dài
-      temperature: 0.6, 
-      max_tokens: 1024,
-    });
+    for (const p of products) {
+      if (msg.includes(p.key) || msg.includes(p.name.toLowerCase())) {
+        return {
+          reply: `✅ Sản phẩm ${p.name} đang có giá ${p.price}.\nBạn muốn thêm vào giỏ hàng luôn không?`,
+          quickReplies: ['Thêm vào giỏ', 'Xem mẫu khác']
+        };
+      }
+    }
 
-    const replyText = completion.choices[0]?.message?.content || "Shop đang bận xíu.";
+    // 2.2. Check Khoảng giá
+    if (msg.match(/dưới ?500|rẻ|sinh viên/i)) {
+        return {
+          reply: '📗 Dưới 500k bên mình có:\n• Asia MT-105: 280k\n• GRS A102K: 320k\n• Protec Kitty: 450k',
+          quickReplies: ['Xem Asia MT-105', 'Xem GRS A102K']
+        };
+    }
 
-    res.json({
-      reply: replyText,
-      quickReplies: generateQuickReplies(replyText)
-    });
+    // 2.3. Tra cứu
+    if (msg.match(/tra cứu|đơn hàng|bảo hành/i)) {
+        return {
+            reply: '🔍 Bạn muốn tra cứu theo cách nào?',
+            quickReplies: ['Nhập mã đơn hàng', 'Nhập số điện thoại']
+        };
+    }
+    
+    // Check nhập SĐT
+    if (msg.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/)) {
+         return {
+            reply: 'Dạ shop đã nhận được SĐT. Hệ thống đang kiểm tra đơn hàng của bạn...',
+            quickReplies: ['Quay lại menu']
+        };
+    }
 
-  } catch (error) {
-    console.error("❌ GROQ ERROR:", error);
-    res.json({ reply: "Lỗi kết nối AI.", quickReplies: [] });
+    // 2.4. Chào hỏi & Menu
+    if (msg.match(/^(hi|hello|xin chào|chào|hey)$/i) || msg.includes('menu')) {
+        return {
+          reply: 'Chào bạn! Mình là GENZ Bot 🤖. Mình giúp gì được cho bạn?',
+          quickReplies: ['Tư vấn mua hàng', 'Tra cứu đơn hàng', 'Địa chỉ shop']
+        };
+    }
+
+    // Nếu không khớp Rule nào -> Trả về null để gọi AI
+    return null; 
+}
+
+// --- 3. XỬ LÝ AI (GROQ) ---
+async function getGroqAIResponse(message, conversationHistory) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return 'Lỗi: Chưa cấu hình API Key trong file .env';
+
+  // Lấy dữ liệu sản phẩm từ MongoDB để AI "học"
+  let productContext = "";
+  try {
+    const db = await connectDB();
+    const products = await db.collection('products').find({}).limit(10).toArray();
+    if (products.length > 0) {
+        productContext = products.map(p => `- ${p.name}: ${p.price}`).join('\n');
+    } else {
+        productContext = "Hiện chưa có dữ liệu sản phẩm.";
+    }
+  } catch (e) { console.error('Lỗi DB:', e); }
+
+  const systemPrompt = `Bạn là nhân viên shop GENZ Helmet. 
+  Dữ liệu sản phẩm thực tế:
+  ${productContext}
+  
+  Quy tắc:
+  1. Tư vấn ngắn gọn, vui vẻ, dùng emoji.
+  2. Chỉ tư vấn sản phẩm có trong danh sách trên.
+  3. Nếu không biết, hãy bảo khách gọi hotline 0877772244.`;
+
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        // [ĐÃ SỬA] Đổi sang model Llama 3.3 70B mới nhất như trong ảnh của bạn
+        model: 'llama-3.3-70b-versatile', 
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...conversationHistory,
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 300
+      },
+      { headers: { 'Authorization': `Bearer ${apiKey}` } }
+    );
+    return response.data.choices[0].message.content;
+  } catch (err) {
+    console.error('Lỗi Groq API:', err.response ? err.response.data : err.message);
+    return 'Xin lỗi, server đang bận. Bạn hỏi lại câu khác giúp mình nhé!';
   }
+}
+
+// --- 4. API ENDPOINT ---
+router.post('/chat', async (req, res) => {
+    try {
+        const { message, conversationHistory = [] } = req.body;
+        if (!message) return res.status(400).json({ error: 'Message empty' });
+
+        // Bước 1: Thử Rule trước
+        const ruleRes = getRuleBasedResponse(message);
+        if (ruleRes) {
+            return res.json({ ...ruleRes, source: 'rule' });
+        }
+
+        // Bước 2: Gọi AI nếu không khớp Rule
+        console.log('-> Gọi AI cho câu:', message);
+        const aiRes = await getGroqAIResponse(message, conversationHistory);
+        res.json({
+            reply: aiRes,
+            quickReplies: ['Tư vấn Fullface', 'Tra cứu đơn hàng'],
+            source: 'ai'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal Error' });
+    }
 });
 
 export default router;

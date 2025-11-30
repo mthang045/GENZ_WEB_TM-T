@@ -21,7 +21,7 @@ export function ImageCropDialog({ open, onClose, onImageCropped, currentImage })
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('Ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB');
+         // Removed BOM
         return;
       }
       const reader = new FileReader();

@@ -1,3 +1,6 @@
+// This file contains the Card component and related subcomponents.
+// It is important to ensure that there is no BOM at the start of this file.
+
 import { cn } from "./utils";
 
 function Card({ className, ...props }) {
@@ -26,13 +29,15 @@ function CardHeader({ className, ...props }) {
   );
 }
 
-function CardTitle({ className, ...props }) {
+function CardTitle({ className, children, ...props }) {
   return (
     <h4
       data-slot="card-title"
       className={cn("leading-none", className)}
       {...props}
-    />
+    >
+      {children || <span className="sr-only">Card title</span>}
+    </h4>
   );
 }
 

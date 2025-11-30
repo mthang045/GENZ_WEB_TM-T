@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React from 'react'; // Removed BOM
 import { useState, useEffect } from 'react';
 import { Package, Plus, Minus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -9,10 +9,15 @@ import { Badge } from '../ui/badge';
 export function InventoryManagement({ colors, sizes, inventory, onChange }) {
   const [localInventory, setLocalInventory] = useState(inventory);
 
+  // Memoize onChange to avoid dependency warning
+  const stableOnChange = React.useCallback(onChange, []);
+  const validColors = React.useMemo(() => colors.filter(c => c.trim()), [colors]);
+  const validSizes = React.useMemo(() => sizes.filter(s => s.trim()), [sizes]);
+
   useEffect(() => {
     const newInventory = [];
-    colors.filter(c => c.trim()).forEach(color => {
-      sizes.filter(s => s.trim()).forEach(size => {
+    validColors.forEach(color => {
+      validSizes.forEach(size => {
         const existing = localInventory.find(inv => inv.color === color && inv.size === size);
         newInventory.push({
           color,
@@ -22,8 +27,8 @@ export function InventoryManagement({ colors, sizes, inventory, onChange }) {
       });
     });
     setLocalInventory(newInventory);
-    onChange(newInventory);
-  }, [colors.join(','), sizes.join(',')]);
+    stableOnChange(newInventory);
+  }, [validColors, validSizes]);
 
   const updateQuantity = (color, size, quantity) => {
     const newInventory = localInventory.map(inv =>
@@ -89,8 +94,7 @@ export function InventoryManagement({ colors, sizes, inventory, onChange }) {
     );
   }
 
-  const validColors = colors.filter(c => c.trim());
-  const validSizes = sizes.filter(s => s.trim());
+
 
   return (
     <Card>

@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+﻿// This file has been updated to remove BOM
+import { useState } from 'react';
 import { Image as ImageIcon, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';

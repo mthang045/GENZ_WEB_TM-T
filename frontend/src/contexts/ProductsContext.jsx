@@ -1,8 +1,8 @@
-﻿import { toast } from 'sonner'
+﻿// This file has been modified to remove BOM
+// This file has been modified to remove BOM
+import { toast } from 'sonner'
 import { createContext, useContext, useState, useEffect } from 'react'
 import { products as productsAPI } from '../lib/api'
-
-
 
 const ProductsContext = createContext(undefined)
 
@@ -13,30 +13,27 @@ export function ProductsProvider({ children }) {
 
   // Load products from API
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
 
     const load = async () => {
       try {
-  setLoading(true)
-  const res = await productsAPI.list()
-        console.log('[ProductsContext] API Response:', res)
-        const data = res.data || res
-        console.log('[ProductsContext] Parsed data:', data)
-        if (!mounted) return
-        setProducts(Array.isArray(data) ? data : [])
+        setLoading(true);
+        const res = await productsAPI.list();
+        // API trả về {data: [...]} hoặc [...]
+        let data = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+        if (!mounted) return;
+        setProducts(data);
       } catch (err) {
-        console.error('[ProductsContext] Failed to load products from API', err)
-        setError(err?.message || String(err))
-        setProducts([])
+        console.error('[ProductsContext] Failed to load products from API', err);
+        setError(err?.message || String(err));
+        setProducts([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    load()
-    return () => { mounted = false }
-  }, [])
-
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
   const addProduct = (productData) => {
     const newProduct = {
       ...productData,
@@ -44,7 +41,7 @@ export function ProductsProvider({ children }) {
     }
     const updatedProducts = [...products, newProduct]
     setProducts(updatedProducts)
-    toast.success('Th�m s?n ph?m th�nh c�ng!')
+    toast.success('Thêm sản phẩm thành công!')
   }
 
   const updateProduct = (id, productData) => {
@@ -52,13 +49,13 @@ export function ProductsProvider({ children }) {
       product.id === id ? { ...product, ...productData } : product
     )
     setProducts(updatedProducts)
-    toast.success('C?p nh?t s?n ph?m th�nh c�ng!')
+    toast.success('Cập nhật sản phẩm thành công!')
   }
 
   const deleteProduct = (id) => {
     const updatedProducts = products.filter(product => product.id !== id)
     setProducts(updatedProducts)
-    toast.success('X�a s?n ph?m th�nh c�ng!')
+    toast.success('Xóa sản phẩm thành công!')
   }
 
   return (

@@ -59,18 +59,18 @@ export function AdminProducts() {
     setSelectedProduct(product);
     setIsEditMode(true);
     setFormData({
-      name: product.name,
-      price: product.price.toString(),
-      category: product.category,
-      brand: product.brand,
-      rating: product.rating.toString(),
-      description: product.description,
-      image: product.image,
-      features: product.features,
-      colors: product.colors,
-      sizes: product.sizes,
-      inStock: product.inStock,
-      inventory: product.inventory || [],
+      name: product.name || '',
+      price: (product.price !== undefined && product.price !== null) ? product.price.toString() : '',
+      category: product.category || '',
+      brand: product.brand || '',
+      rating: (product.rating !== undefined && product.rating !== null) ? product.rating.toString() : '',
+      description: product.description || '',
+      image: product.image || '',
+      features: Array.isArray(product.features) ? product.features : [''],
+      colors: Array.isArray(product.colors) ? product.colors : [''],
+      sizes: Array.isArray(product.sizes) ? product.sizes : [''],
+      inStock: product.inStock !== undefined ? product.inStock : true,
+      inventory: Array.isArray(product.inventory) ? product.inventory : [],
       colorImages: product.colorImages || {}
     });
     setDialogOpen(true);

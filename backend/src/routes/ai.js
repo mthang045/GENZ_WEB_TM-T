@@ -1,4 +1,19 @@
+// Lấy lịch sử hội thoại của user
+router.get('/chat/history', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const history = await ChatHistory.findOne({ userId });
+    res.json({ messages: history?.messages || [] });
+  } catch (err) {
+    console.error('Lỗi lấy lịch sử chat:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 import express from 'express'
+import { authMiddleware } from '../middleware/auth.js';
+import ChatHistory from '../models/ChatHistory.js';
 
 const router = express.Router()
 
@@ -21,7 +36,8 @@ function checkRate(ip) {
   return entry.count <= RATE_LIMIT_MAX
 }
 
-router.post('/chat', async (req, res) => {
+// Yêu cầu đăng nhập mới được sử dụng chatbot
+router.post('/chat', authMiddleware, async (req, res) => {
   try {
     const ip = req.ip || req.connection?.remoteAddress || 'unknown'
     if (!checkRate(ip)) {
@@ -110,6 +126,31 @@ router.post('/chat', async (req, res) => {
       assistant = JSON.stringify(data)
     }
 
+    // Lưu lịch sử hội thoại vào MongoDB
+    try {
+      const userId = req.userId;
+      if (userId) {
+        // Lưu 2 message cuối: user và assistant
+        const lastUserMsg = messages[messages.length - 1];
+        const assistantMsg = { role: 'assistant', content: assistant };
+        // Tìm hoặc tạo mới lịch sử
+        await ChatHistory.findOneAndUpdate(
+          { userId },
+          {
+            $push: {
+              messages: {
+                $each: [lastUserMsg, assistantMsg],
+                $position: undefined
+              }
+            },
+            $set: { updatedAt: new Date() }
+          },
+          { upsert: true, new: true }
+        );
+      }
+    } catch (e) {
+      console.error('Lỗi lưu lịch sử chat:', e);
+    }
     return res.json({ assistant, raw: data })
   } catch (err) {
     console.error('AI proxy error', err)

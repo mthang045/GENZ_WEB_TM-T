@@ -5,8 +5,11 @@ WORKDIR /usr/src/app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund || npm install
 
+
 # Copy source code
 COPY src ./src
+# Copy data for debug/reset-products
+COPY data ./data
 
 EXPOSE 4000
 CMD ["node", "src/index.js"]

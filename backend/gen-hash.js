@@ -1,0 +1,7 @@
+// Script to generate bcrypt hash for 'admin123'
+const bcrypt = require('bcryptjs');
+
+const password = 'admin123';
+bcrypt.hash(password, 10).then(hash => {
+  console.log('Hash for admin123:', hash);
+});

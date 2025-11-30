@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "mongodb": "^6.20.0",
+    "puppeteer": "^24.25.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^2.10.3"
+  }
+}

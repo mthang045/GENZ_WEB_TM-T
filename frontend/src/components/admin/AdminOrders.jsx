@@ -59,9 +59,12 @@ export function AdminOrders() {
   };
 
   const filteredOrders = ordersList.filter(order => {
-    const matchesSearch = order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerInfo.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const orderId = order.orderId ? String(order.orderId) : '';
+    const customerName = order.customerInfo && order.customerInfo.name ? String(order.customerInfo.name) : '';
+    const customerEmail = order.customerInfo && order.customerInfo.email ? String(order.customerInfo.email) : '';
+    const matchesSearch = orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerEmail.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -15,11 +17,13 @@ import logo from '../assets/f78e3c35da8a6df43c6fe4dc2c4c28f2a6e85644.png';
 
 export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,8 +62,8 @@ export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="relative w-full">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
@@ -68,7 +72,7 @@ export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500 w-full"
                     required
                   />
                 </div>
@@ -76,19 +80,28 @@ export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
               
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-white">Mật khẩu</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="relative w-full">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
-                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                    className="pl-10 pr-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500 w-full"
                     required
                   />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-400"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
               
@@ -106,13 +119,16 @@ export function Login({ onBack, onSwitchToRegister, onLoginSuccess }) {
               <p className="text-gray-400 text-sm">
                 Chưa có tài khoản?{' '}
                 <button
-                  onClick={onSwitchToRegister}
+                  type="button"
+                  onClick={() => navigate('/register')}
                   className="text-pink-400 hover:text-pink-300 underline"
                 >
                   Đăng ký ngay
                 </button>
               </p>
-              
+              <p className="text-sm mt-2">
+                <a href="/forgot-password" className="text-pink-400 hover:text-pink-300 underline">Quên mật khẩu?</a>
+              </p>
               <div className="pt-4 border-t border-gray-800">
                 <p className="text-xs text-gray-500">
                   Tài khoản demo Admin:
