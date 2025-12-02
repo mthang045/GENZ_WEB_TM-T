@@ -51,7 +51,7 @@ router.get('/products', async (req, res) => {
     }
 });
 
-// Tạo sản phẩm mới (Admin only) - sinh id tự tăng (string) dựa trên max id hiện có
+// Tạo sản phẩm mới (Admin only)
 router.post('/products', requireAdmin, async (req, res) => {
     try {
         const payload = req.body || {};
@@ -91,10 +91,8 @@ router.post('/products', requireAdmin, async (req, res) => {
             createdAt: now,
             updatedAt: now
         };
-
         await productsCollection.insertOne(doc);
 
-        // Xóa cache danh sách
         try {
             if (redis) await redis.del('products:all');
         } catch (redisErr) {

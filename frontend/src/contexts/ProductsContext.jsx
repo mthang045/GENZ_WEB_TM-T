@@ -11,7 +11,7 @@ export function ProductsProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(undefined)
 
-  // Load products from API
+  // Load products
   useEffect(() => {
     let mounted = true;
 
@@ -19,9 +19,7 @@ export function ProductsProvider({ children }) {
       try {
         setLoading(true);
         const res = await productsAPI.list();
-        // API trả về {data: [...]} hoặc [...]
         let data = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
-        // Chuẩn hóa id để frontend dùng thống nhất
         data = data
           .filter((p) => p && typeof p === 'object')
           .map((p) => ({ ...p, id: String(p.id || p._id || '') }));
@@ -45,7 +43,6 @@ export function ProductsProvider({ children }) {
       const normalized = { ...created, id: String(created.id || created._id || '') }
       setProducts((prev) => [...(Array.isArray(prev) ? prev : []), normalized])
       toast.success('Thêm sản phẩm thành công!')
-      // Optional: reload to ensure consistency
       try {
         const listRes = await productsAPI.list()
         let data = Array.isArray(listRes) ? listRes : (Array.isArray(listRes.data) ? listRes.data : [])

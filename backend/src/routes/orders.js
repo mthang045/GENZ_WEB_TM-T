@@ -41,7 +41,6 @@ router.get('/orders', async (req, res) => {
     }
 });
 
-// Tạo đơn hàng mới
 function buildOrderData(data, userId) {
     const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-6)}`;
     return {
@@ -105,7 +104,6 @@ const decrementInventory = async (orderId) => {
         const order = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
         if (!order)
             return false;
-        // Giảm inventory cho từng item trong đơn hàng
         for (const item of order.items) {
             const productId = new ObjectId(item.productId);
             const product = await productsCollection.findOne({ _id: productId });
@@ -131,18 +129,17 @@ const decrementInventory = async (orderId) => {
     }
 };
 
-// PATCH /api/orders/:id/status
-// Khi status → 'delivered' (COD) hoặc order có paymentStatus='completed' (VNPay), giảm inventory
+//  /api/orders/:id/status
 router.patch('/orders/:id/status', requireAdmin, async (req, res) => {
     try {
         const { status } = req.body;
         const ordersCollection = db.collection('orders');
         const order = await ordersCollection.findOne({ _id: new ObjectId(req.params.id) });
+
         if (!order)
             return res.status(404).json({ error: 'Order not found' });
-        // Cập nhật status
+        
         const result = await ordersCollection.findOneAndUpdate({ _id: new ObjectId(req.params.id) }, { $set: { status, updatedAt: new Date() } }, { returnDocument: 'after' });
-        // Nếu status → 'delivered' hoặc 'completed', giảm inventory
         if (status === 'delivered' || status === 'completed') {
             const shouldDecrement = (status === 'delivered' && order.paymentMethod === 'cod') || // COD giao thành công
                 (status === 'completed' && order.paymentStatus === 'completed'); // VNPay/Banking đã thanh toán

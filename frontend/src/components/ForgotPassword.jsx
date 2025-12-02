@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ForgotPassword() {
-  const [step, setStep] = useState(1); // 1: nhập email, 2: nhập mã + mật khẩu mới
+  const [step, setStep] = useState(1); 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { requestPasswordReset, resetPassword } = useAuth();
 
   const handleSendCode = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
     try {
-      await apiFetch('auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }), headers: { 'Content-Type': 'application/json' } });
+      await requestPasswordReset(email);
       setMessage('Mã xác nhận đã gửi về email!');
       setStep(2);
     } catch (err) {
@@ -30,7 +31,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setMessage('');
     try {
-      await apiFetch('auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, newPassword }), headers: { 'Content-Type': 'application/json' } });
+      await resetPassword(email, code, newPassword);
       setMessage('Đổi mật khẩu thành công!');
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {

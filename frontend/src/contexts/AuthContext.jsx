@@ -1,7 +1,7 @@
 ﻿// Removed BOM
 import { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { auth as apiAuth, orders as apiOrders } from '../lib/api'
+import { auth as apiAuth, orders as apiOrders, apiFetch } from '../lib/api'
 
 
 
@@ -12,16 +12,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState([])
 
-  // Load user from localStorage and orders from API on mount
   useEffect(() => {
-    // Clean up old localStorage keys
     localStorage.removeItem('genz_products')
 
-    // Load token AND user from localStorage FIRST
     const savedToken = localStorage.getItem('genz_token')
     const savedUser = localStorage.getItem('genz_user')
     
-    // Removed BOM
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser))
@@ -30,7 +26,6 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // Load orders from API (will use token from localStorage)
     const loadOrders = async () => {
       try {
         const res = await apiOrders.list()
@@ -43,11 +38,9 @@ export function AuthProvider({ children }) {
         setLoading(false)
       }
     }
-
     if (savedToken && savedUser) {
       loadOrders()
     } else {
-      // No saved session, mark loading immediately
       setLoading(false)
     }
   }, [])
@@ -65,7 +58,6 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       const res = await apiAuth.login({ email, password })
-      // Expect response { token, user }
       if (res.token) {
         localStorage.setItem('genz_token', res.token)
         localStorage.setItem('genz_user', JSON.stringify(res.user))
@@ -159,6 +151,66 @@ export function AuthProvider({ children }) {
     return orders.filter(order => order.customerInfo.userId === user.userId)
   }
 
+  // Forgot password - gửi email xác nhận
+  const requestPasswordReset = async (email) => {
+    try {
+      await apiFetch('auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      return true
+    } catch (err) {
+      console.error('Failed to request password reset:', err)
+      throw err
+    }
+  }
+
+  // Reset password - xác nhận code và đặt lại mật khẩu
+  const resetPassword = async (email, code, newPassword) => {
+    try {
+      await apiFetch('auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, code, newPassword }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      return true
+    } catch (err) {
+      console.error('Failed to reset password:', err)
+      throw err
+    }
+  }
+
+  // VNPay - tạo payment URL
+  const createVNPayPayment = async (orderId, amount, orderDescription) => {
+    try {
+      const response = await apiFetch('api/vnpay/create-payment', {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId,
+          orderDescription,
+          returnUrl: `http://localhost:4000/api/vnpay/return`
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      return response
+    } catch (err) {
+      console.error('Failed to create VNPay payment:', err)
+      throw err
+    }
+  }
+
+  // VNPay - kiểm tra trạng thái thanh toán
+  const checkVNPayStatus = async (txnRef) => {
+    try {
+      const response = await apiFetch(`api/vnpay/status/${txnRef}`)
+      return response
+    } catch (err) {
+      console.error('Failed to check VNPay status:', err)
+      throw err
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -171,7 +223,11 @@ export function AuthProvider({ children }) {
         orders,
         addOrder,
         updateOrderStatus,
-        getUserOrders
+        getUserOrders,
+        requestPasswordReset,
+        resetPassword,
+        createVNPayPayment,
+        checkVNPayStatus
       }}
     >
       {children}

@@ -67,7 +67,7 @@ router.post('/vnpay/create-payment', authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Failed to create payment URL' });
     }
 });
-// Handle VNPay return callback (user returned from VNPay gateway)
+// Lấy kết quả trả về từ VNPay
 router.get('/vnpay/return', async (req, res) => {
     try {
         const vnp_Params = req.query;

@@ -10,14 +10,12 @@ import { Separator } from './ui/separator';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { ArrowLeft, CreditCard, Truck, CheckCircle2, Loader } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiFetch } from '../lib/api';
 
 
 export function Checkout({ onBack, onSuccess }) {
     const { cart, getTotalPrice, clearCart } = useCart();
-    const { user, addOrder } = useAuth();
+    const { addOrder, createVNPayPayment } = useAuth();
     const [orderPlaced, setOrderPlaced] = useState(false);
-    const [createdOrderId, setCreatedOrderId] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [formData, setFormData] = useState({
         fullName: '',
@@ -39,7 +37,6 @@ export function Checkout({ onBack, onSuccess }) {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
-        // Show banking info if banking method is selected
         if (name === 'paymentMethod') {
             setShowBankingInfo(value === 'banking');
         }
@@ -48,17 +45,8 @@ export function Checkout({ onBack, onSuccess }) {
     const handleVNPayPayment = async (orderId, amount) => {
         try {
             setIsProcessing(true);
-            const response = await apiFetch('api/vnpay/create-payment', {
-                method: 'POST',
-                body: JSON.stringify({
-                    orderId,
-                    orderDescription: `Payment for order ${orderId}`,
-                    returnUrl: `http://localhost:4000/api/vnpay/return` // Backend URL để xử lý
-                }),
-                headers: { 'Content-Type': 'application/json' }
-            });
+            const response = await createVNPayPayment(orderId, amount, `Payment for order ${orderId}`);
             if (response.success && response.paymentUrl) {
-                // Redirect to VNPay payment gateway
                 window.location.href = response.paymentUrl;
             } else {
                 toast.error('Lỗi tạo URL thanh toán!');
@@ -79,71 +67,40 @@ export function Checkout({ onBack, onSuccess }) {
         }
         try {
             setIsProcessing(true);
-            // Chỉ tạo order khi không dùng VNPay
-            // Nếu dùng VNPay, tạo order ở sau khi thanh toán thành công
+            const orderData = {
+                items: cart.map(item => {
+                    console.log('[Checkout] Cart item:', item);
+                    return {
+                        productId: item.id,
+                        productName: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        color: item.selectedColor,
+                        size: item.selectedSize
+                    };
+                }),
+                customerInfo: {
+                    name: formData.fullName,
+                    email: formData.email || 'N/A',
+                    phone: formData.phone,
+                    address: formData.address
+                },
+                totalAmount: getTotalPrice(),
+                shippingCost: 0,
+                paymentMethod: formData.paymentMethod,
+                paymentStatus: 'pending',
+                notes: formData.note
+            };
+
             if (formData.paymentMethod !== 'vnpay') {
-                // Create order directly via API
-                const orderResponse = await apiFetch('api/orders', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        items: cart.map(item => ({
-                            productId: item.id,
-                            productName: item.name,
-                            quantity: item.quantity,
-                            price: item.price,
-                            color: item.selectedColor,
-                            size: item.selectedSize
-                        })),
-                        customerInfo: {
-                            name: formData.fullName,
-                            email: formData.email || 'N/A',
-                            phone: formData.phone,
-                            address: formData.address
-                        },
-                        totalAmount: getTotalPrice(),
-                        shippingCost: 0,
-                        paymentMethod: formData.paymentMethod,
-                        paymentStatus: 'pending',
-                        notes: formData.note
-                    }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                setCreatedOrderId(orderResponse.data._id);
+                await addOrder(orderData);
                 setOrderPlaced(true);
-                // Clear cart after 2 seconds
                 setTimeout(() => {
                     clearCart();
                 }, 2000);
             } else {
-                // Với VNPay, tạo order rồi gọi create-payment
-                const orderResponse = await apiFetch('api/orders', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        items: cart.map(item => ({
-                            productId: item.id,
-                            productName: item.name,
-                            quantity: item.quantity,
-                            price: item.price,
-                            color: item.selectedColor,
-                            size: item.selectedSize
-                        })),
-                        customerInfo: {
-                            name: formData.fullName,
-                            email: formData.email || 'N/A',
-                            phone: formData.phone,
-                            address: formData.address
-                        },
-                        totalAmount: getTotalPrice(),
-                        shippingCost: 0,
-                        paymentMethod: 'vnpay',
-                        paymentStatus: 'pending',
-                        notes: formData.note
-                    }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const orderId = orderResponse.data._id;
-                setCreatedOrderId(orderId);
-                // Gọi VNPay payment
+                const orderResponse = await addOrder(orderData);
+                const orderId = orderResponse?.data?._id || orderResponse?._id;
                 await handleVNPayPayment(orderId, getTotalPrice());
             }
         } catch (err) {

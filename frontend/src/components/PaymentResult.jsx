@@ -3,14 +3,15 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { CheckCircle2, XCircle, Loader } from 'lucide-react';
-import { apiFetch } from '../lib/api';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 export function PaymentResult() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { clearCart } = useCart();
+    const { checkVNPayStatus } = useAuth();
     const [loading, setLoading] = useState(true);
     const [paymentStatus, setPaymentStatus] = useState('loading'); // 'loading', 'success', 'failed'
     const status = searchParams.get('status');
@@ -25,10 +26,8 @@ export function PaymentResult() {
                     setLoading(false);
                     return;
                 }
-
-                // Optional: Fetch payment details from backend
                 try {
-                    const response = await apiFetch(`api/vnpay/status/${txnRef}`);
+                    const response = await checkVNPayStatus(txnRef);
                     if (response.success && response.data.status === 'completed') {
                         setPaymentStatus('success');
                         clearCart();
@@ -38,7 +37,6 @@ export function PaymentResult() {
                         toast.error('Thanh toán thất bại');
                     }
                 } catch (err) {
-                    // If API call fails, use URL status as fallback
                     if (status === 'completed') {
                         setPaymentStatus('success');
                         clearCart();
@@ -55,9 +53,8 @@ export function PaymentResult() {
                 setLoading(false);
             }
         };
-
         checkPaymentStatus();
-    }, [txnRef, status, clearCart]);
+    }, [txnRef, status, clearCart, checkVNPayStatus]);
 
     if (loading) {
         return (

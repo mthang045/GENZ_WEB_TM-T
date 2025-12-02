@@ -3,20 +3,13 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { carts as cartsAPI } from '../lib/api'
 import { useAuth } from './AuthContext'
 
-
-
 const CartContext = createContext(undefined)
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
-
-
-
-
-
-
+  
   const loadCart = useCallback(async () => {
     try {
       if (!user) {
@@ -25,7 +18,11 @@ export function CartProvider({ children }) {
       }
       setLoading(true)
       const res = await cartsAPI.get()
-      const cartData = res.items || res.data?.items || []
+      const cartData = (res.items || res.data?.items || []).map(item => ({
+        ...item,
+        id: item.productId || item.id  // Ensure 'id' field exists
+      }))
+      console.log('[CartContext] Loaded cart data:', JSON.stringify(cartData, null, 2))
       setCart(cartData)
     } catch (err) {
       toast.error('Lỗi tải giỏ hàng')
@@ -35,7 +32,6 @@ export function CartProvider({ children }) {
     }
   }, [user])
 
-  // Load cart when user changes (login/logout)
   useEffect(() => {
     if (user) {
       loadCart()
@@ -50,8 +46,6 @@ export function CartProvider({ children }) {
         toast.error('Vui lòng đăng nhập!')
         return
       }
-
-
       await cartsAPI.addItem({
         productId: product.id,
         name: product.name,
@@ -61,7 +55,6 @@ export function CartProvider({ children }) {
         selectedColor: color,
         selectedSize: size
       })
-
       await loadCart()
       toast.success('Đã thêm sản phẩm vào giỏ hàng!')
     } catch (err) {

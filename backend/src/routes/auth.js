@@ -80,7 +80,7 @@ router.post('/auth/forgot-password', async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
                 const code = Math.floor(100000 + Math.random() * 900000).toString();
                 await usersCollection.updateOne({ email }, { $set: { resetCode: code, resetCodeCreated: new Date() } });
-                try {
+                 try {
                     await sendVerificationEmail(email, code);
                 } catch (mailErr) {
                     console.error('Send email error:', mailErr);
