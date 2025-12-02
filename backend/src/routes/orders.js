@@ -5,14 +5,14 @@ import { requireAdmin, authMiddleware } from '../middleware/auth.js';
 const router = Router();
 router.use(authMiddleware);
 
-// Helper: Lấy user từ token
+// Lấy user từ token
 async function getUserFromToken(userIdFromToken) {
     if (!userIdFromToken) return null;
     const usersCollection = db.collection('users');
     return usersCollection.findOne({ _id: new ObjectId(userIdFromToken) });
 }
 
-// Helper: Lấy orders theo quyền
+// Lấy orders theo quyền
 async function getOrdersByUser(user) {
     const ordersCollection = db.collection('orders');
     if (user.role === 'admin') {
@@ -22,6 +22,7 @@ async function getOrdersByUser(user) {
     }
 }
 
+// Lấy danh sách đơn hàng của user hiện tại
 router.get('/orders', async (req, res) => {
     try {
         const userIdFromToken = req.userId;
@@ -39,8 +40,8 @@ router.get('/orders', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });
-// POST /api/orders (create order - for regular users)
-// Helper: Tạo order mới
+
+// Tạo đơn hàng mới
 function buildOrderData(data, userId) {
     const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Date.now()).slice(-6)}`;
     return {
@@ -58,6 +59,7 @@ function buildOrderData(data, userId) {
     };
 }
 
+// Tạo đơn hàng mới
 router.post('/orders', async (req, res) => {
     try {
         const data = req.body;
@@ -79,7 +81,8 @@ router.post('/orders', async (req, res) => {
         res.status(500).json({ error: 'Failed to create order' });
     }
 });
-// GET /api/orders/:id
+
+// Lấy đơn hàng theo id
 router.get('/orders/:id', async (req, res) => {
     try {
         const ordersCollection = db.collection('orders');
@@ -93,7 +96,7 @@ router.get('/orders/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch order' });
     }
 });
-// Helper: Giảm inventory khi đơn hàng được giao (COD) hoặc thanh toán thành công (VNPay)
+
 const decrementInventory = async (orderId) => {
     var _a;
     try {
@@ -110,11 +113,9 @@ const decrementInventory = async (orderId) => {
                 console.warn(`[Inventory] Product ${item.productId} not found`);
                 continue;
             }
-            // Tìm stock variant (color + size) và giảm quantity
             const stockVariant = (_a = product.stock) === null || _a === void 0 ? void 0 : _a.find((s) => s.color === item.color && s.size === item.size);
             if (stockVariant) {
                 const newQuantity = Math.max(0, stockVariant.quantity - item.quantity);
-                // Update stock array
                 await productsCollection.updateOne({ _id: productId, 'stock.color': item.color, 'stock.size': item.size }, { $set: { 'stock.$.quantity': newQuantity, updatedAt: new Date() } });
                 console.log(`[Inventory] Reduced ${item.productName} (${item.color}/${item.size}): ${stockVariant.quantity} → ${newQuantity}`);
             }
@@ -129,6 +130,7 @@ const decrementInventory = async (orderId) => {
         return false;
     }
 };
+
 // PATCH /api/orders/:id/status
 // Khi status → 'delivered' (COD) hoặc order có paymentStatus='completed' (VNPay), giảm inventory
 router.patch('/orders/:id/status', requireAdmin, async (req, res) => {

@@ -9,7 +9,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
 
-// DEBUG: Echo route for troubleshooting header/body issues (no auth)
 router.all('/debug/echo', (req, res) => {
     console.log('DEBUG ECHO ROUTE HIT', {
         method: req.method,
@@ -27,6 +26,7 @@ router.all('/debug/echo', (req, res) => {
         message: 'If you see this, /debug/echo route handler ran.'
     });
 });
+
 // POST /api/debug/promote { email }
 router.post('/debug/promote', async (req, res) => {
     var _a;

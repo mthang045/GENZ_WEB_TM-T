@@ -3,8 +3,9 @@ import { VNPay, ignoreLogger, VnpLocale, dateFormat } from 'vnpay';
 import { ObjectId } from 'mongodb';
 import { db } from '../app.js';
 import { authMiddleware } from '../middleware/auth.js';
+
+
 const router = Router();
-// Initialize VNPay
 const vnpay = new VNPay({
     tmnCode: process.env.VNP_TMN_CODE || 'TMNCODE',
     secureSecret: process.env.VNP_SECURE_SECRET || 'secret',
@@ -21,8 +22,6 @@ router.post('/vnpay/create-payment', authMiddleware, async (req, res) => {
         if (!returnUrl) {
             return res.status(400).json({ error: 'Missing required field: returnUrl' });
         }
-        // Nếu có orderId, lấy amount từ order hiện tại
-        // Nếu không, frontend gửi amount
         let amount;
         if (orderId) {
             const ordersCollection = db.collection('orders');
@@ -35,9 +34,7 @@ router.post('/vnpay/create-payment', authMiddleware, async (req, res) => {
         else {
             return res.status(400).json({ error: 'orderId is required' });
         }
-        // Generate transaction ID nếu chưa có payment
         const txnRef = orderId;
-        // Create payment URL
         const paymentUrl = vnpay.buildPaymentUrl({
             vnp_Amount: amount,
             vnp_IpAddr: req.ip || '127.0.0.1',

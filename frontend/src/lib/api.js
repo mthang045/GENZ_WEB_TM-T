@@ -1,12 +1,4 @@
-﻿// @type RequestInit & { query?: Record };
-
-
-// @type RequestInit & { query?: Record };
-
-
-// @type RequestInit & { query?: Record };
-// Hỗ trợ cả runtime env (window._env_) khi build production static
-let API_BASE = import.meta.env?.VITE_API_URL;
+﻿let API_BASE = import.meta.env?.VITE_API_URL;
 if (!API_BASE && typeof window !== 'undefined' && window._env_ && window._env_.VITE_API_URL) {
   API_BASE = window._env_.VITE_API_URL;
 }
@@ -17,10 +9,11 @@ if (!API_BASE) {
   API_BASE = 'http://localhost:4000/api';
 }
 
-// @type RequestInit & { query?: Record };
 
 function buildUrl(path, query) {
-  const url = new URL(path, API_BASE);
+  const base = API_BASE.endsWith('/') ? API_BASE : API_BASE + '/';
+  const cleanPath = path.replace(/^\/*/, '');
+  const url = new URL(cleanPath, base);
   if (query) {
     Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   }
@@ -31,7 +24,6 @@ export async function apiFetch(path, options= {}) {
   const url = buildUrl(path, options.query);
   const headers= {};
   if (options.headers) Object.assign(headers, options.headers);
-  // Add auth token if present
   const token = localStorage.getItem('genz_token');
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -44,27 +36,29 @@ export async function apiFetch(path, options= {}) {
 }
 
 export const products = {
-  list: () => apiFetch('api/products'),
-  create: (payload) => apiFetch('api/products', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  list: () => apiFetch('products'),
+  create: (payload) => apiFetch('products', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  update: (id, payload) => apiFetch(`products/${id}`, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  delete: (id) => apiFetch(`products/${id}`, { method: 'DELETE' }),
 };
 
 export const auth = {
-  register: (payload) => apiFetch('api/auth/register', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
-  login: (payload) => apiFetch('api/auth/login', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  register: (payload) => apiFetch('auth/register', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  login: (payload) => apiFetch('auth/login', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
 };
 
 export const orders = {
-  list: () => apiFetch('api/orders'),
-  create: (payload) => apiFetch('api/orders', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
-  get: (id) => apiFetch(`api/orders/${id}`),
-  updateStatus: (id, status) => apiFetch(`api/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), headers: { 'Content-Type': 'application/json' } })
+  list: () => apiFetch('orders'),
+  create: (payload) => apiFetch('orders', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  get: (id) => apiFetch(`orders/${id}`),
+  updateStatus: (id, status) => apiFetch(`orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), headers: { 'Content-Type': 'application/json' } })
 }
 
 export const carts = {
-  get: () => apiFetch('api/carts'),
-  addItem: (payload) => apiFetch('api/carts/items', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
-  updateItem: (productId, payload) => apiFetch(`api/carts/items/${productId}`, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
-  removeItem: (productId) => apiFetch(`api/carts/items/${productId}`, { method: 'DELETE' }),
-  clear: () => apiFetch('api/carts', { method: 'DELETE' }),
+  get: () => apiFetch('carts'),
+  addItem: (payload) => apiFetch('carts/items', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  updateItem: (productId, payload) => apiFetch(`carts/items/${productId}`, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  removeItem: (productId) => apiFetch(`carts/items/${productId}`, { method: 'DELETE' }),
+  clear: () => apiFetch('carts', { method: 'DELETE' }),
 }
 

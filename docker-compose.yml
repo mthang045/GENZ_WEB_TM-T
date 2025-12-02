@@ -18,6 +18,8 @@ services:
       - VNP_HOST
       - FRONTEND_URL
       - GROQ_API_KEY
+      - EMAIL_USER
+      - EMAIL_PASS
     depends_on:
       - redis
 

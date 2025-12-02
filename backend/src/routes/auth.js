@@ -78,11 +78,8 @@ router.post('/auth/forgot-password', async (req, res) => {
         const usersCollection = db.collection('users');
         const user = await usersCollection.findOne({ email });
         if (!user) return res.status(404).json({ error: 'User not found' });
-                // Tạo mã xác nhận 6 số
                 const code = Math.floor(100000 + Math.random() * 900000).toString();
-                // Lưu vào user
                 await usersCollection.updateOne({ email }, { $set: { resetCode: code, resetCodeCreated: new Date() } });
-                // Gửi mã xác nhận qua email
                 try {
                     await sendVerificationEmail(email, code);
                 } catch (mailErr) {
@@ -100,6 +97,7 @@ router.post('/auth/forgot-password', async (req, res) => {
 router.post('/auth/reset-password', async (req, res) => {
     try {
         const { email, code, newPassword } = req.body;
+        console.log('[POST /auth/reset-password] Received:', { email, code, newPassword });
         if (!email || !code || !newPassword) return res.status(400).json({ error: 'Missing fields' });
         if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
         const usersCollection = db.collection('users');

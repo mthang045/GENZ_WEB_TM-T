@@ -16,7 +16,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setMessage('');
     try {
-      await apiFetch('api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }), headers: { 'Content-Type': 'application/json' } });
+      await apiFetch('auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }), headers: { 'Content-Type': 'application/json' } });
       setMessage('Mã xác nhận đã gửi về email!');
       setStep(2);
     } catch (err) {
@@ -30,7 +30,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setMessage('');
     try {
-      await apiFetch('api/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, newPassword }), headers: { 'Content-Type': 'application/json' } });
+      await apiFetch('auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, newPassword }), headers: { 'Content-Type': 'application/json' } });
       setMessage('Đổi mật khẩu thành công!');
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
@@ -60,6 +60,13 @@ export default function ForgotPassword() {
         )}
         {step === 2 && (
           <form onSubmit={handleResetPassword}>
+            <label className="block text-gray-300 mb-2">Email</label>
+            <input
+              type="email"
+              className="w-full p-2 mb-4 rounded bg-gray-700 text-white"
+              value={email}
+              disabled
+            />
             <label className="block text-gray-300 mb-2">Mã xác nhận</label>
             <input
               type="text"

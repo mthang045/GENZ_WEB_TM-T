@@ -127,7 +127,7 @@ export function AdminProducts() {
     setFormData({ ...formData, colorImages });
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const productData = {
       name: formData.name,
@@ -140,15 +140,15 @@ export function AdminProducts() {
       features: formData.features.filter(f => f.trim() !== ''),
       colors: formData.colors.filter(c => c.trim() !== ''),
       sizes: formData.sizes.filter(s => s.trim() !== ''),
-      inStock: formData.inStock,
-      inventory: formData.inventory,
-      colorImages: formData.colorImages
+      inStock: formData.inStock
     };
 
     if (isEditMode && selectedProduct) {
-      updateProduct(selectedProduct.id, productData);
+      await updateProduct(selectedProduct.id, productData);
     } else {
-      addProduct(productData);
+      productData.inventory = formData.inventory;
+      productData.colorImages = formData.colorImages;
+      await addProduct(productData);
     }
     setDialogOpen(false);
   };
@@ -177,8 +177,8 @@ export function AdminProducts() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden">
+        {filteredProducts.map((product, idx) => (
+          <Card key={product.id || idx} className="overflow-hidden">
             <div className="relative aspect-square bg-gray-100">
               <ImageWithFallback src={product.image} alt={product.name} className="w-full h-full object-cover" />
               <Badge className="absolute top-3 left-3 bg-pink-500">{product.category}</Badge>

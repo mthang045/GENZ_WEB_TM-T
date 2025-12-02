@@ -21,6 +21,10 @@ export function ProductsProvider({ children }) {
         const res = await productsAPI.list();
         // API trả về {data: [...]} hoặc [...]
         let data = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+        // Chuẩn hóa id để frontend dùng thống nhất
+        data = data
+          .filter((p) => p && typeof p === 'object')
+          .map((p) => ({ ...p, id: String(p.id || p._id || '') }));
         if (!mounted) return;
         setProducts(data);
       } catch (err) {
@@ -34,28 +38,58 @@ export function ProductsProvider({ children }) {
     load();
     return () => { mounted = false; };
   }, []);
-  const addProduct = (productData) => {
-    const newProduct = {
-      ...productData,
-      id: `product-${Date.now()}`
+  const addProduct = async (productData) => {
+    try {
+      const res = await productsAPI.create(productData)
+      const created = res?.data || res
+      const normalized = { ...created, id: String(created.id || created._id || '') }
+      setProducts((prev) => [...(Array.isArray(prev) ? prev : []), normalized])
+      toast.success('Thêm sản phẩm thành công!')
+      // Optional: reload to ensure consistency
+      try {
+        const listRes = await productsAPI.list()
+        let data = Array.isArray(listRes) ? listRes : (Array.isArray(listRes.data) ? listRes.data : [])
+        data = data
+          .filter((p) => p && typeof p === 'object')
+          .map((p) => ({ ...p, id: String(p.id || p._id || '') }))
+        setProducts(data)
+      } catch (reloadErr) {
+        console.warn('[ProductsContext] Reload after create failed', reloadErr)
+      }
+    } catch (err) {
+      console.error('[ProductsContext] Failed to create product', err)
+      toast.error('Thêm sản phẩm thất bại!')
+      throw err
     }
-    const updatedProducts = [...products, newProduct]
-    setProducts(updatedProducts)
-    toast.success('Thêm sản phẩm thành công!')
   }
 
-  const updateProduct = (id, productData) => {
-    const updatedProducts = products.map(product =>
-      product.id === id ? { ...product, ...productData } : product
-    )
-    setProducts(updatedProducts)
-    toast.success('Cập nhật sản phẩm thành công!')
+  const updateProduct = async (id, productData) => {
+    try {
+      const res = await productsAPI.update(id, productData)
+      const updated = res?.data || res
+      const updatedId = String(updated.id || id)
+      const next = (Array.isArray(products) ? products : [])
+        .map((p) => (String(p.id) === updatedId ? { ...p, ...updated, id: updatedId } : p))
+      setProducts(next)
+      toast.success('Cập nhật sản phẩm thành công!')
+    } catch (err) {
+      console.error('[ProductsContext] Failed to update product', err)
+      toast.error('Cập nhật sản phẩm thất bại!')
+      throw err
+    }
   }
 
-  const deleteProduct = (id) => {
-    const updatedProducts = products.filter(product => product.id !== id)
-    setProducts(updatedProducts)
-    toast.success('Xóa sản phẩm thành công!')
+  const deleteProduct = async (id) => {
+    try {
+      await productsAPI.delete(id)
+      const updatedProducts = (Array.isArray(products) ? products : [])
+        .filter((product) => String(product.id) !== String(id))
+      setProducts(updatedProducts)
+      toast.success('Xóa sản phẩm thành công!')
+    } catch (err) {
+      console.error('[ProductsContext] Failed to delete product', err)
+      toast.error('Xóa sản phẩm thất bại!')
+    }
   }
 
   return (

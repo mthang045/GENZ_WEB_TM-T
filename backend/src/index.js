@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
     console.log(`GenZ backend listening on port ${PORT}`);
     const raw = process.env.MONGO_URI || '';
     try {
