@@ -143,9 +143,12 @@ export function AuthProvider({ children }) {
   }
 
   const updateOrderStatus = (orderId, status) => {
-    const updatedOrders = orders.map(order => 
-      order._id === orderId ? { ...order, status } : order
-    )
+    const updatedOrders = (Array.isArray(orders) ? orders : [])
+      .filter((o) => o && typeof o === 'object')
+      .map(order => {
+        const oid = order._id || order.id || order.orderId
+        return oid === orderId ? { ...order, status } : order
+      })
     setOrders(updatedOrders)
     toast.success('Cập nhật trạng thái đơn hàng thành công!')
   }

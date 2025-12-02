@@ -58,16 +58,19 @@ export function AdminOrders() {
     }
   };
 
-  const filteredOrders = ordersList.filter(order => {
-    const orderId = order.orderId ? String(order.orderId) : '';
-    const customerName = order.customerInfo && order.customerInfo.name ? String(order.customerInfo.name) : '';
-    const customerEmail = order.customerInfo && order.customerInfo.email ? String(order.customerInfo.email) : '';
-    const matchesSearch = orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customerEmail.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const filteredOrders = ordersList
+    .filter((order) => order && typeof order === 'object')
+    .filter(order => {
+      const orderId = order?.orderId ? String(order.orderId) : '';
+      const customerName = order?.customerInfo?.name ? String(order.customerInfo.name) : '';
+      const customerEmail = order?.customerInfo?.email ? String(order.customerInfo.email) : '';
+      const matchesSearch = orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customerEmail.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
@@ -77,12 +80,17 @@ export function AdminOrders() {
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       const res = await apiOrders.updateStatus(orderId, newStatus);
-      const updated = res.data;
-      setOrdersList(prev => prev.map(o => (o._id === updated._id ? { ...o, status: updated.status } : o)));
-      if (selectedOrder?._id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
+      const updated = (res && typeof res === 'object' && (res.data || res)) ? (res.data || res) : null;
+      const updatedId = updated?._id || updated?.id || updated?.orderId || orderId;
+      const updatedStatus = updated?.status || newStatus;
+      setOrdersList(prev => (Array.isArray(prev) ? prev : [])
+        .filter((o) => o && typeof o === 'object')
+        .map(o => ((o._id || o.id || o.orderId) === updatedId ? { ...o, status: updatedStatus } : o))
+      );
+      if ((selectedOrder?._id || selectedOrder?.id || selectedOrder?.orderId) === updatedId) {
+        setSelectedOrder({ ...selectedOrder, status: updatedStatus });
       }
-      updateOrderStatus(orderId, newStatus);
+      updateOrderStatus(updatedId, updatedStatus);
     } catch (err) {
       console.error('Failed to update status', err);
     }
@@ -90,11 +98,16 @@ export function AdminOrders() {
 
   useEffect(() => {
     let mounted = true;
-    apiOrders.list().then((res) => {
-      if (!mounted) return;
-      const data = res.data || [];
-      setOrdersList(data);
-    }).catch(err => console.error('Failed to load orders', err));
+    apiOrders.list()
+      .then((res) => {
+        if (!mounted) return;
+        const raw = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        const normalized = raw
+          .filter((o) => o && typeof o === 'object')
+          .map((o) => ({ ...o, _id: o._id || o.id || o.orderId }));
+        setOrdersList(normalized);
+      })
+      .catch(err => console.error('Failed to load orders', err));
     return () => { mounted = false; };
   }, []);
 
@@ -136,33 +149,37 @@ export function AdminOrders() {
             <p className="text-center text-gray-500 py-12">Không tìm thấy đơn hàng</p>
           ) : (
             <div className="divide-y">
-              {filteredOrders.map((order) => (
-                <div key={order._id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p>#{order.orderId}</p>
-                        <Badge className={getStatusColor(order.status)}>
-                          {getStatusText(order.status)}
-                        </Badge>
+              {filteredOrders.map((order, idx) => {
+                if (!order || typeof order !== 'object') return null;
+                const key = String(order._id || order.id || order.orderId || idx);
+                return (
+                  <div key={key} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p>#{order.orderId || key}</p>
+                          <Badge className={getStatusColor(order.status)}>
+                            {getStatusText(order.status)}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">{order.customerInfo?.name || '—'}</p>
+                        <p className="text-sm text-gray-500">{order.customerInfo?.email || '—'}</p>
+                        <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
                       </div>
-                      <p className="text-sm text-gray-600">{order.customerInfo.name}</p>
-                      <p className="text-sm text-gray-500">{order.customerInfo.email}</p>
-                      <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Tổng tiền</p>
-                        <p className="text-pink-500">{formatPrice(order.totalAmount)}</p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Tổng tiền</p>
+                          <p className="text-pink-500">{formatPrice(order.totalAmount || 0)}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => handleViewOrder(order)}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Xem
+                        </Button>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => handleViewOrder(order)}>
-                        <Eye className="w-4 h-4 mr-1" />
-                        Xem
-                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -183,7 +200,7 @@ export function AdminOrders() {
                   <Label className="mb-2 block">Trạng thái đơn hàng</Label>
                   <Select
                     value={selectedOrder.status}
-                    onValueChange={(value) => handleStatusChange(selectedOrder._id, value)}
+                    onValueChange={(value) => handleStatusChange(selectedOrder._id || selectedOrder.id || selectedOrder.orderId, value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -203,19 +220,19 @@ export function AdminOrders() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tên:</span>
-                      <span>{selectedOrder.customerInfo.name}</span>
+                      <span>{selectedOrder.customerInfo?.name || '—'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Email:</span>
-                      <span>{selectedOrder.customerInfo.email}</span>
+                      <span>{selectedOrder.customerInfo?.email || '—'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">SĐT:</span>
-                      <span>{selectedOrder.customerInfo.phone}</span>
+                      <span>{selectedOrder.customerInfo?.phone || '—'}</span>
                     </div>
                     <div className="flex justify-between items-start">
                       <span className="text-gray-600">Địa chỉ:</span>
-                      <span className="text-right max-w-xs">{selectedOrder.customerInfo.address}</span>
+                      <span className="text-right max-w-xs">{selectedOrder.customerInfo?.address || '—'}</span>
                     </div>
                     {selectedOrder.notes && (
                        <div className="flex justify-between items-start">
@@ -229,7 +246,7 @@ export function AdminOrders() {
                 <div>
                   <h4 className="mb-3">Sản phẩm</h4>
                   <div className="space-y-3">
-                    {selectedOrder.items.map((item, index) => (
+                    {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                         <div>
                           <p>{item.productName}</p>
